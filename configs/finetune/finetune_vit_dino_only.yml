@@ -1,0 +1,39 @@
+# Training pipeline
+epochs: 80
+batch_size: 64
+strategy: auto
+num_workers: 6
+gradient_clip_val: 5.0
+precision: "16-mixed"
+accumulate_grad_batches: 1
+
+input_resolution: [512, 512]
+
+# Model parameters
+model_params:
+  mesa_lmbda: 3.0
+  mesa_finetune: False
+  num_classes: 4
+
+  ## Ignore this part, without scheduler 
+  warmup_steps: 5 # For MAE, Warm-up epochs
+  min_lr: 5.0e-7
+  weight_decay: 5.0e-2
+  lr: 1.0e-3
+  layer_decay: 0.75
+  use_annealing_lr: True
+  use_decay_lr: True
+
+  ##
+  img_size: 512
+
+  # Vit-B settings
+  patch_size: 16
+  reg_tokens: 0
+  decoder_cls: "upernet"
+  freeze_encoder: False
+  encoder_type: "vit"
+
+# Vit-t with small patches
+encoder_ckpt_path: './checkpoints/pretrain_vit_dino_only.ckpt'
+encoder_ckpt_model_params: './configs/pretrain/pretrain_vit_dino_only_model_config.yml'

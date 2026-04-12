@@ -1,0 +1,36 @@
+# Training pipeline
+epochs: 3000
+batch_size: 16 # Set to a lot larger value! Low value for testing purposes
+strategy: auto
+num_workers: 6
+gradient_clip_val: 5.0
+precision: "16-mixed"
+accumulate_grad_batches: 1
+test_batch_size: 32
+normalize: false # Whether to normalize the input images
+#knn_eval_frequency: 20
+name: aoi-pretrain-mae
+
+input_resolution: [512, 512]
+
+# Model parameters
+model_params:
+  lr: 1.5e-4 # base learning rate used during pretraining in the paper.
+  min_lr: 1e-7 # small learning rate that's linearly ramped up
+  img_size: 512
+  mask_ratio: 0.4
+  warmup_steps: 40 # For MAE this represents the number of warmup epochs
+  in_chans: 2
+  # Vit-B settings
+  vit_type: "t"
+  patch_size: 16
+  reg_tokens: 0
+  #reg_tokens: 4 # Used because in the paper "VISION TRANSFORMERS NEED REGISTERS" they get 
+  # maximum segmentation mIoU with 4 register tokens
+
+# Model checkpoint
+ckpt_path: null
+
+# Global configs
+dataset_name: "pretrain_with_unlabelled"
+# data_path: "./datasets/pretrain_with_unlabelled/"

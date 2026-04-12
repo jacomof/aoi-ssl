@@ -1,0 +1,59 @@
+# Training pipeline
+epochs: 3000
+batch_size: 16
+strategy: "auto"
+num_workers: 6
+gradient_clip_val: 5.0
+precision: "16-mixed"
+test_batch_size: 32
+name: aoi-pretrain-dino
+
+input_resolution: [512, 512]
+
+normalize: false
+base_augmentations: true
+knn_eval_frequency: 5
+patience: 1000
+monitor: "val/knn_mean_iou"
+
+mim_start_epoch: 30
+
+# Model parameters
+model_params:
+  lr: 2e-4
+  accumulate_grad_batches: 1
+  min_lr: 1e-7
+  img_size: 224
+  mask_ratio: 0.75
+  in_chans: 2
+  # Vit-B settings
+  vit_type: "t"
+  patch_size: 4
+  student_temp_cls: 0.1
+  teacher_temp_cls: 0.04
+  center_momentum_cls: 0.9
+  student_temp_patch: 0.1
+  teacher_temp_patch: 0.04
+  center_momentum_patch: 0.9
+  center_momentum: 0.9
+  downsample_vit: false
+  normalize_loss: false
+  centering_mode: null
+  use_projector: true
+  dino_loss_weight: 1.0
+  reconstruction_loss_weight: 0.0
+  embs_before_head: false
+  num_reg_tokens: 0
+  reg_tokens: 0
+  out_dim: 768
+  use_mae: false
+  double_view: false # Set True to use buffers as different views
+  nlocal_crops: 6
+  warmup_epochs: 10
+  num_patches_global: 196
+  use_fastervit_0: true
+
+
+
+# Model checkpoint
+# ckpt_path: './checkpoints/pretrain_vit_dino_example.ckpt'

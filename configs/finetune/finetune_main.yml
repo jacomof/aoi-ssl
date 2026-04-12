@@ -1,0 +1,26 @@
+# Store all tracking, and dataset parameters unrelated to pipeline and model 
+# optimization.
+
+# FOR TRAINNG DDRNET
+
+# Experiment tracking
+# MLFlow Experiment name
+name: aoi-pretrain-dino
+# Current experiment number
+experiment_n: 2 
+# MLFlow tracking uri
+tracking_uri: "http://localhost:5000"
+
+# Dataset variables
+crop_size: 512 
+classes: ["class_0", "class_1"]
+
+dataset_name: "0_6_57"
+data_path: "./datasets/pretrain_split/"
+
+# Mostly fixed training variables
+seed: 42
+monitor: "val/loss"
+patience: 500
+log_every_n: 40
+check_val_every_n: 3
