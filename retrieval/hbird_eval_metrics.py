@@ -13,7 +13,6 @@ from scipy.optimize import linear_sum_assignment
 from collections import defaultdict
 
 
-
 class PredsmIoU:
     """
     Subclasses Metric. Computes mean Intersection over Union (mIoU) given ground-truth and predictions.

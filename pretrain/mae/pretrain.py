@@ -155,10 +155,8 @@ def run_segmentation(
     )
 
     if config.model_params.get("use_fastervit_0", False):
-        print("Using FasterViT 0.0 as the encoder.")
         model = LitMAE(parameters=config.model_params, model=MaskedAutoencoderFasterVit)
     else:
-        print("Using standard ViT as the encoder.")
         model = LitMAE(parameters=config.model_params)
 
     # Create callbacks

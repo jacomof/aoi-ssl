@@ -18,6 +18,7 @@ XFORMERS_ENABLED = os.environ.get("XFORMERS_DISABLED") is None
 try:
     if XFORMERS_ENABLED:
         from xformers.ops import memory_efficient_attention, unbind
+
         XFORMERS_AVAILABLE = True
     else:
         raise ImportError

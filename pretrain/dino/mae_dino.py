@@ -51,7 +51,6 @@ class DinoMaskedAutoencoder(MaskedAutoencoder):
         self.use_projector = parameters.get("use_projector", True)
 
         if self.donwsample_vit:
-            print("Initializing Downsample ViT")
             self.encoder = init_vit_tiny_downsample(
                 parameters["vit_type"],
                 num_register_tokens=self.num_reg_tokens,
@@ -59,7 +58,6 @@ class DinoMaskedAutoencoder(MaskedAutoencoder):
             )
 
         else:
-            print("Initializing ViT")
             self.encoder = init_vit(
                 parameters["vit_type"],
                 num_register_tokens=self.num_reg_tokens,
@@ -100,7 +98,6 @@ class DinoMaskedAutoencoder(MaskedAutoencoder):
         )
 
         if self.normalize_loss:
-            print("Normalizing loss")
             self.register_buffer("dino_loss_running_max", torch.tensor(float("-inf")))
             self.register_buffer("dino_loss_running_min", torch.tensor(float("inf")))
             self.register_buffer("mae_loss_running_max", torch.tensor(float("-inf")))
@@ -268,6 +265,5 @@ class DinoMaskedAutoencoder(MaskedAutoencoder):
                     )
 
             loss += mae_loss * self.reconstruction_loss_weight
-            # print("loss_reconstruction: ", mae_loss.item())
 
         return loss, embs_student, embs_teacher

@@ -192,7 +192,6 @@ class LitFasterViTSegmentation(PLBaseModel, SegmentationLoggerMixin):
         Initialize the optimizer with decayed learning rates for each layer.
         """
         if decayed_lr:
-            print("Using decayed learning rate with layer decay (similar domain).")
             param_groups = []
             num_blocks = len(self.model.encoder.blocks)
 
@@ -323,10 +322,8 @@ class LitFasterViTSegmentation(PLBaseModel, SegmentationLoggerMixin):
         Initialize the optimizer based on the layer decay setting.
         """
         if self.model_params.get("use_reversed_decay", False):
-            print("Using reversed decay.")
             return self._initialize_optimizer_reversed_decay(decayed_lr=decayed_lr)
         else:
-            print("Using standard optimizer settings.")
             return self._initialize_optimizer_normal(decayed_lr=decayed_lr)
 
     def _initialize_annealed_lr(self, decayed_lr: bool = True):

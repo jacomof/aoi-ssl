@@ -1,0 +1,35 @@
+# Experiment Tracking
+# MLFlow Experiment name
+name: aoi-finetune-unet-plus-plus
+
+# Training pipeline
+epochs: 100
+batch_size: 8
+strategy: auto
+num_workers: 1
+gradient_clip_val: 5.0
+precision: "16-mixed"
+accumulate_grad_batches: 1
+
+input_resolution: [512, 512] # must match img_size in model_params
+model: "unet_plus_plus"
+
+# Model parameters
+model_params:
+  num_classes: 2 # change with the number of classes in your dataset
+
+  warmup_epochs: 5 # Warm-up Epochs
+  min_lr: 5.0e-7
+  weight_decay: 5.0e-2
+  lr: 1.0e-3
+  layer_decay: 0.75
+  use_annealing_lr: True
+  use_decay_lr: True
+
+  img_size: 512 # input image size for fixed resolution models
+
+  pretrained: True
+
+# Vit-t with small patches
+#encoder_ckpt_path: './checkpoints/aoi-pretrain-mae/epoch=109-val_loss=0.000.ckpt'
+#encoder_ckpt_model_params: './configs/pretrain/pretrain_vit_mae_only_model_config.yml'

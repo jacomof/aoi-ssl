@@ -290,7 +290,7 @@ class KNNHummingBirdSegmentation:
         if self.num_batches == -1:
             self.memory_size = None  # Unbounded memory size
         if self.memory_size is not None:
-            ## create memory of specific size
+            # create memory of specific size
             self.feature_memory = torch.zeros(
                 (self.memory_size, self.encoder.embed_dim)
             )
@@ -540,7 +540,7 @@ class KNNHummingBirdSegmentation:
         """
         q = F.normalize(q, dim=-1)
         k = F.normalize(k, dim=-1)
-        q = q.unsqueeze(2)  ## (bs, num_patches, 1, d_k)
+        q = q.unsqueeze(2)  # (bs, num_patches, 1, d_k)
         attn = torch.einsum("bnld,bnmd->bnlm", q, k) / beta  # (bs, num_patches, 1, NN)
         attn = attn.squeeze(2)  # remove previous unsqueeze
         attn = F.softmax(attn, dim=-1)
@@ -673,7 +673,7 @@ class KNNHummingBirdSegmentation:
 
     def get_class_frequency_vectorized(self, patchified_gts):
         """Vectorized version of class frequency computation."""
-        ## (bs, spatial_resolution, spatial_resolution, patch_size*patch_size, num_classes)
+        # (bs, spatial_resolution, spatial_resolution, patch_size*patch_size, num_classes)
         bs, spatial_res_h, spatial_res_w, num_pixels, num_classes = patchified_gts.shape
         presence_indicators = (
             patchified_gts.sum(dim=3) > 0
@@ -727,7 +727,7 @@ class KNNHummingBirdSegmentation:
             patch_scores = patch_scores.flatten()
             nonzero_indices = nonzero_indices.flatten()
 
-            # assert zero_score_idx[0].size(0) != 0 ## for pascal every patch should belong to one class
+            # assert zero_score_idx[0].size(0) != 0 # for pascal every patch should belong to one class
             patch_scores[~nonzero_indices] = 1e6
 
             # sample uniform distribution with the same size as the
@@ -737,7 +737,7 @@ class KNNHummingBirdSegmentation:
             patch_scores[nonzero_indices] *= uniform_x
             feature = features[k]
 
-            ### select the least num_sampled_features score indices
+            # select the least num_sampled_features score indices
             _, indices = torch.topk(
                 patch_scores, self.num_sampled_features, largest=False
             )
@@ -802,7 +802,7 @@ class KNNHummingBirdSegmentation:
                     patch_size = self.encoder.patch_embed.patch_size[0]
                     patchified_gts = self.patchify_gt(
                         y, patch_size
-                    )  ## (bs, spatial_resolution, spatial_resolution, patch_size*patch_size, num_classes)
+                    )  # (bs, spatial_resolution, spatial_resolution, patch_size*patch_size, num_classes)
                     # Compute the label for each patch
                     if average_patches:
                         label = patchified_gts.float().mean(dim=3)
@@ -831,10 +831,10 @@ class KNNHummingBirdSegmentation:
                         )
                         normalized_sampled_features = sampled_features
                         label = label.flatten(1, 2)
-                        ## select the labels of the sampled features
+                        # select the labels of the sampled features
                         sampled_indices = sampled_indices.to(self.device)
 
-                        ## repeat the label for each sampled feature
+                        # repeat the label for each sampled feature
                         label_hat = label.gather(
                             1,
                             sampled_indices.unsqueeze(-1).expand(

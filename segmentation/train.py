@@ -12,9 +12,13 @@ from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 
 from pretrain.mae.mae_fastervit import MaskedAutoencoderFasterVit
 from pretrain.mae.mae import MaskedAutoencoder
+from segmentation.models.unet_plus_plus.lit_unet_plus_plus_seg import (
+    LitUNetPlusPlusSegmentation,
+)
 import segmentation.utils as utils
 from segmentation.models.faster_vit.lit_faster_vit_seg import LitFasterViTSegmentation
 from segmentation.models.vit.lit_vit_seg import LitViTSegmentation
+from segmentation.models.deeplab.lit_deeplab import LitDeeplabSegmentation
 from pretrain.mae.lit_mae import LitMAE
 from data.semantic_module import SemanticDataModule
 from segmentation.models.vit import init_vit
@@ -22,7 +26,12 @@ from segmentation.models.vit import init_vit
 
 def run_segmentation(
     config: argparse.Namespace,
-    seg_model: LitFasterViTSegmentation | LitViTSegmentation,
+    seg_model: (
+        LitFasterViTSegmentation
+        | LitViTSegmentation
+        | LitDeeplabSegmentation
+        | LitUNetPlusPlusSegmentation
+    ),
 ):
     torch.set_float32_matmul_precision("medium")
     pl.seed_everything(config.seed)
@@ -127,9 +136,16 @@ def run_segmentation(
         # Moved set_encoder outside of constructor so that the encoder is not initialized two times
         model.model.set_encoder(encoder=encoder, freeze_encoder=False)
 
+    # Train baselines
+    elif (
+        seg_model is LitDeeplabSegmentation or seg_model is LitUNetPlusPlusSegmentation
+    ):
+        # For training Deeplab from scratch
+        print("Training baseline")
+        model = seg_model(parameters=config.model_params, classes=config.classes)
+
     else:
-        print("Using ViT from scratch.")
-        # For training from scratch
+        # For training ViT from scratch
         model = seg_model(parameters=config.model_params, classes=config.classes)
         encoder = init_vit(
             config.model_params["vit_type"],
@@ -266,6 +282,8 @@ if __name__ == "__main__":
     models = {
         "fastervit": LitFasterViTSegmentation,
         "vit": LitViTSegmentation,
+        "deeplab": LitDeeplabSegmentation,
+        "unet_plus_plus": LitUNetPlusPlusSegmentation,
     }
 
     config.run_name = f"{args.model.lower()}-{config.run_key}"

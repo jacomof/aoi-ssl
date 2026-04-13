@@ -35,7 +35,6 @@ class UperNetDecoder(nn.Module):
         fpn_inplanes=None,
         **kwargs
     ):
-        print("Embed dim in upernet decoder: ", embed_dim)
         super().__init__()
         self.resolution = output_size
         self.num_classes = num_classes
@@ -46,15 +45,12 @@ class UperNetDecoder(nn.Module):
 
         # Set fpn_inplanes to encoder intermediate layer channel dimension.
         # For vit model this is always 512 (embed_dim).
-        print("Using FPN inplanes: ", fpn_inplanes)
         if fpn_inplanes is not None:
             self.fpn_inplanes = fpn_inplanes
         else:
             # Default to embed_dim for all pool scales.
             # This is the case for ViT models.
             self.fpn_inplanes = (embed_dim,) * len(pool_scales)
-        print("FPN inplanes: ", self.fpn_inplanes)
-        print("Pool scales: ", pool_scales)
 
         # Using different pooling method, no PrRoIPool2D, just
         # average, max pooling. Need PrRoIPool2D for pool scale 1.
@@ -74,7 +70,7 @@ class UperNetDecoder(nn.Module):
                 )
             )
         self.ppm = nn.ModuleList(self.ppm)
-        # TODO figure out why the output shape only uses 2 x 2 instead of 32x32 -> self.pool with scale 2
+
         self.ppm_last_conv = conv3x3_bn_relu(self.ppm_out_dim, inter_dim, 1)
 
         # FPN Module

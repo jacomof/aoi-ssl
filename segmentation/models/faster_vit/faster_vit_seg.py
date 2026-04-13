@@ -107,8 +107,11 @@ class FasterVitSeg(nn.Module):
         assert self.encoder is not None, "First set an encoder before training"
 
         feature = self.encoder.forward_intermediate(x)
-        for f in feature:
-            print(f"Feature shape: {f.shape}")
+
+        # Uncomment to debug feature shapes
+        # for f in feature:
+        #     print(f"Feature shape: {f.shape}")
+
         # Decoder combines multiple layers of the encoder. Each layer's output is the patch tokens
         logits = self.decoder(feature)  # [Layer1, Layer2, Layer3, Layer4]
         # Shape of logits is (batch_size, num_classes, height, width)
