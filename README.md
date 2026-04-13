@@ -52,7 +52,7 @@ See `THIRD_PARTY_NOTICES` for a file-by-file provenance and licensing summary.
 
 ## Stub Dataset Layout
 
-The default stub ImageNet-based dataset layout is:
+The default stub MNIST dataset layout is:
 
 ```text
 datasets/MNIST
