@@ -1,6 +1,6 @@
 # Training pipeline
 epochs: 72
-batch_size: 64
+batch_size: 8
 strategy: auto
 num_workers: 6
 gradient_clip_val: 5.0
@@ -13,7 +13,7 @@ input_resolution: [512, 512]
 model_params:
   mesa_lmbda: 3.0
   mesa_finetune: False
-  num_classes: 4
+  num_classes: 2
 
   ## Ignore this part, without scheduler 
   warmup_steps: 5 # For MAE, Warm-up epochs

@@ -177,14 +177,6 @@ class LitViTSegmentation(PLBaseModel, SegmentationLoggerMixin):
             )
 
         self.log_dict({"val/loss": loss, **metrics})
-        self.log_segmentation_overlay(
-            self.trainer.loggers,
-            batch["image"],
-            y_hat > 0.5,
-            batch_idx,
-            context="val",
-            epoch=self.current_epoch,
-        )
 
         return loss
 
@@ -208,24 +200,7 @@ class LitViTSegmentation(PLBaseModel, SegmentationLoggerMixin):
             context="test",
         )
         self.log_dict({"test/loss": loss, **metrics})
-
-        self.log_segmentation_overlay(
-            self.trainer.loggers,
-            batch["image"],
-            y_hat > 0.5,
-            batch_idx,
-            filenames=batch["name"],
-            context="test",
-            epoch=self.current_epoch,
-        )
-
-        # Log MESA metrics if finetuning
-        self.mesa_evaluation(
-            batch,
-            batch_idx,
-            log_images_fn=self.log_segmentation_overlay,
-            context="ema/test",
-        )
+        
         return loss
 
     def _initialize_optimizer_reversed_decay(self, decayed_lr: bool = True):

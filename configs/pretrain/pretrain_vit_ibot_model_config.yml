@@ -11,7 +11,7 @@ name: aoi-pretrain-ibot
 
 input_resolution: [512, 512]
 
-normalize: false
+normalize: true # Whether to normalize the input images
 base_augmentations: true
 knn_eval_frequency: 5
 patience: 50

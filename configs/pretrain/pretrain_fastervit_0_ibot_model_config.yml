@@ -1,16 +1,16 @@
 # Training pipeline
 epochs: 3000
-batch_size: 16
+batch_size: 8
 strategy: "auto"
-num_workers: 6
+num_workers: 1
 gradient_clip_val: 5.0
 precision: "16-mixed"
-test_batch_size: 32
-name: aoi-pretrain-dino
+test_batch_size: 8
+name: aoi-pretrain-fastervit-ibot
 
 input_resolution: [512, 512]
 
-normalize: false
+normalize: true # Whether to normalize the input images
 base_augmentations: true
 knn_eval_frequency: 5
 patience: 1000

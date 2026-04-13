@@ -9,17 +9,17 @@ import lightning.pytorch as pl
 from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor
 from lightning.pytorch.strategies.ddp import DDPStrategy
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
-from torchvision.models import resnet50, resnet101, resnet152
 
+from pretrain.mae.mae_fastervit import MaskedAutoencoderFasterVit
+from pretrain.mae.mae import MaskedAutoencoder
 import segmentation.utils as utils
-from segmentation.models.faster_vit import LitFasterViTSegmentation
+from segmentation.models.faster_vit.lit_faster_vit_seg import LitFasterViTSegmentation
 from segmentation.models.vit.lit_vit_seg import LitViTSegmentation
 from pretrain.mae.lit_mae import LitMAE
 from pretrain.dino.lit_mae_dino import LitMAEDino
 from data.semantic_module import SemanticDataModule
 from pretrain.dino.pretrain_dino import DataAugmentationDINO, GaussianBlur, Solarization, ColorJitterFor2Channel, ClipTo01
 from data.pretrain_module_ibot import DataAugmentationiBot
-from torch import nn
 from data.retrieval_module import RetrievalDataModule
 from segmentation.models.vit import init_vit
 
@@ -97,7 +97,6 @@ def run_segmentation(
         run_name=config.run_name,
         experiment_n=config.experiment_n,
         experiment_name=config.name,
-        use_tb_logger=True,
     )
 
     
@@ -131,9 +130,16 @@ def run_segmentation(
         config.model_params = utils.merge_model_params_segementation_encoder(
             config, config.encoder_ckpt_model_params
         )
+
+        encoder_cls_map = {
+            "mae": MaskedAutoencoder,
+            "fastervit": MaskedAutoencoderFasterVit,
+        }
+        encoder_cls = encoder_cls_map.get(config.model, MaskedAutoencoder)
         print("Configuration after merge: ", config)
         mae = LitMAE.load_from_checkpoint(
             config.encoder_ckpt_path, parameters=config_mae.model_params,
+            model=encoder_cls,
             strict=False
         )
         encoder = mae.get_encoder()
@@ -280,14 +286,16 @@ if __name__ == "__main__":
     config = utils.merge_config(args.config, args, args.model_config)
 
     # model saved in args.path + experiment_name + job_id
-    config.path = args.path / f"{config.name}_{config.job_id}"
+    config.path = args.path / f"{config.name}"
     config.path.mkdir(exist_ok=True, parents=True)
 
     # Select model
     models = {
-        "fastervit": LitFasterViT,
+        "fastervit": LitFasterViTSegmentation,
         "vit": LitViTSegmentation,
     }
+    print("Config.model is: ", config.model)
+    print("Final configuration: ", models[config.model.lower()])
 
-    config.run_name = f"{args.model.lower()}-{config.job_id}-{config.run_key}"
+    config.run_name = f"{args.model.lower()}-{config.run_key}"
     run_segmentation(config, models[config.model.lower()])

@@ -14,8 +14,8 @@ from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 
 import segmentation.utils as utils
 from pretrain.mae.lit_mae import LitMAE
+from pretrain.mae.mae_fastervit import MaskedAutoencoderFasterVit
 from data.pretrain_module import PretrainDataModule
-from data.augmentation import RandomResizedCropWithMask
 import warnings
 
 from retrieval.knn_seg import KNNSegmentation
@@ -150,11 +150,15 @@ def run_segmentation(
         experiment_name=config.name,
     )
 
-    # # Create model and scale learning rate
-    # config.model_params["lr"] = (
-    #     float(config.model_params["lr"]) * float(config.batch_size) / 100
-    # )  # Scaled learning rate
-    model = LitMAE(parameters=config.model_params)
+
+    if config.model_params.get("use_fastervit_0", False):
+        print("Using FasterViT 0.0 as the encoder.")
+        model = LitMAE(parameters=config.model_params, model=MaskedAutoencoderFasterVit)
+    else:
+        print("Using standard ViT as the encoder.")
+        model = LitMAE(parameters=config.model_params)
+
+
 
     # Create callbacks
     ckpt_callback = ModelCheckpoint(
@@ -175,7 +179,6 @@ def run_segmentation(
             check_on_train_epoch_end=False,
         ),
         utils.GradNormCallback(),
-
         # KNNEvaluationCallback(
         #     batch_size=config.test_batch_size,
         #     eval_data_path=config.eval_data_path,

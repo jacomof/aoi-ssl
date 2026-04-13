@@ -1,19 +1,20 @@
 # Training pipeline
 epochs: 100
-batch_size: 64
+batch_size: 8
 strategy: auto
-num_workers: 6
+num_workers: 1
 gradient_clip_val: 5.0
 precision: "16-mixed"
 accumulate_grad_batches: 1
 
 input_resolution: [512, 512]
+model: "vit"
 
 # Model parameters
 model_params:
   mesa_lmbda: 3.0
   mesa_finetune: False
-  num_classes: 4
+  num_classes: 2
 
   ## Ignore this part, without scheduler 
   warmup_steps: 5 # For MAE, Warm-up epochs
@@ -24,7 +25,6 @@ model_params:
   use_annealing_lr: True
   use_decay_lr: True
 
-  ##
   img_size: 512
 
   # Vit-B settings
@@ -35,5 +35,5 @@ model_params:
   encoder_type: "vit"
 
 # Vit-t with small patches
-encoder_ckpt_path: './checkpoints/pretrain_vit_mae_only.ckpt'
+encoder_ckpt_path: './checkpoints/aoi-pretrain-mae/epoch=109-val_loss=0.000.ckpt'
 encoder_ckpt_model_params: './configs/pretrain/pretrain_vit_mae_only_model_config.yml'

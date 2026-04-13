@@ -20,7 +20,6 @@ class MaskedAutoencoderFasterVit(nn.Module):
         # For the MAE decoder a fixed number of patches should be
         # followed.
         self.use_mae = parameters.get("use_mae", True)
-        print("Using MAE decoder: ", self.use_mae)
         if self.use_mae:
             self.decoder = MaskedDecoder(
                 num_patches=num_patches,
@@ -92,10 +91,8 @@ class MaskedAutoencoderFasterVit(nn.Module):
         return x
 
     def forward(self, x, mask_ratio, compute_loss=False):
-        print("MAE x shape: ", x.shape)
         # Get patches for encoder
         x_patches = self.patchify(x)
-        print("MAE x_patches shape: ", x_patches.shape)
         x_patches, masks, ids_restore = self.random_masking(
             x_patches, mask_ratio=mask_ratio
         )

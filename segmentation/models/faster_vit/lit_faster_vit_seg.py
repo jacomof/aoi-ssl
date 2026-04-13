@@ -205,15 +205,6 @@ class LitFasterViTSegmentation(PLBaseModel, SegmentationLoggerMixin):
 
         self.log_dict({"val/loss": loss, **metrics})
 
-        self.log_segmentation_overlay(
-            self.trainer.loggers,
-            batch["image"],
-            y_hat > 0.5,
-            batch_idx,
-            context="val",
-            epoch=self.current_epoch,
-        )
-
         return loss
 
     def test_step(self, batch: Any, batch_idx: int):
@@ -234,24 +225,6 @@ class LitFasterViTSegmentation(PLBaseModel, SegmentationLoggerMixin):
             batch["class_mask"],
             batch["ignore_mask"],
             context="test",
-        )
-
-        self.log_segmentation_overlay(
-            self.trainer.loggers,
-            batch["image"],
-            y_hat > 0.5,
-            batch_idx,
-            filenames=batch["name"],
-            context="test",
-            epoch=self.current_epoch,
-        )
-
-        # Log MESA metrics if finetuning
-        self.mesa_evaluation(
-            batch,
-            batch_idx,
-            log_images_fn=self.log_segmentation_overlay,
-            context="ema/test",
         )
 
         self.log_dict({"test/loss": loss, **metrics})

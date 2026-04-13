@@ -1,17 +1,17 @@
 # Training pipeline
 epochs: 3000
-batch_size: 16
+batch_size: 8
 strategy: "auto"
-num_workers: 6
+num_workers: 1
 gradient_clip_val: 5.0
 precision: "16-mixed"
-test_batch_size: 32
+test_batch_size: 8
+name: aoi-pretrain-fastervit-mae
 
 
 input_resolution: [512, 512]
 
-normalize: false
-knn_eval_frequency: 20
+normalize: true # Whether to normalize the input images
 patience: 1000
 monitor: "val/loss"
 
@@ -29,6 +29,7 @@ model_params:
   vit_type: "t"
   patch_size: 16
   reg_tokens: 0
+  use_fastervit_0: true
   #reg_tokens: 4 # Used because in the paper "VISION TRANSFORMERS NEED REGISTERS" they get 
   # maximum segmentation mIoU with 4 register tokens
 

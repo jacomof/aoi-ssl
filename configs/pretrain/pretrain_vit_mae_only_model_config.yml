@@ -7,8 +7,7 @@ gradient_clip_val: 5.0
 precision: "16-mixed"
 accumulate_grad_batches: 1
 test_batch_size: 32
-normalize: false # Whether to normalize the input images
-#knn_eval_frequency: 20
+normalize: true # Whether to normalize the input images
 name: aoi-pretrain-mae
 
 input_resolution: [512, 512]

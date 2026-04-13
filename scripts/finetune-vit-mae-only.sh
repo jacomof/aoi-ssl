@@ -16,7 +16,7 @@ conda activate aoi-ssl
 export PYTHONDONTWRITEBYTECODE=1
 
 
-python -m tools.train --config ./configs/finetune/finetune_main.yml \
+python -m segmentation.train --config ./configs/finetune/finetune_main.yml \
     --model_config ./configs/finetune/finetune_vit_mae_only.yml \
     --model vit \
     --run_key "finetune_mae_limited_epochs" \

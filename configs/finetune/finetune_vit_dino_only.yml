@@ -35,5 +35,6 @@ model_params:
   encoder_type: "vit"
 
 # Vit-t with small patches
-encoder_ckpt_path: './checkpoints/pretrain_vit_dino_only.ckpt'
+# Replace with your DINO pre-trained checkpoint and pre-train model config
+encoder_ckpt_path: './checkpoints/aoi-pretrain-dino/epoch=14-val_knn_mean_iou=0.477.ckpt'
 encoder_ckpt_model_params: './configs/pretrain/pretrain_vit_dino_only_model_config.yml'

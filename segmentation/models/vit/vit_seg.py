@@ -7,11 +7,7 @@ import torch.nn.functional as F
 from segmentation.models.lora import LoRA
 from segmentation.models.vit.layers import PatchEmbed
 from segmentation.models.vit import VisionTransformer, init_vit
-from segmentation.models.vit.decoders import (
-    LinearDecoder,
-    FPNDecoder,
-    UperNetDecoder,
-)
+from segmentation.models.upernet_decoder import UperNetDecoder
 
 class ViTSegmentation(nn.Module):
     def __init__(
@@ -54,8 +50,6 @@ class ViTSegmentation(nn.Module):
 
         # Select decoder class
         decoders = {
-            "linear": LinearDecoder,
-            "fpn": FPNDecoder,
             "upernet": UperNetDecoder,
         }
         self.decoder_cls = decoders[decoder_cls]
@@ -183,35 +177,10 @@ class ViTSegmentation(nn.Module):
             x = torch.cat((x_0, x_1), dim=0)
             assert self
 
-        if isinstance(self.decoder, FPNDecoder):
-            feature = self.encoder.get_intermediate_layers(
-                x, n=self.inter_layers, reshape=True
-            )
-            # save embeddings to compute collapse
-            embeds = feature[0]
-            logits = self.decoder(feature)
-        elif isinstance(self.decoder, UperNetDecoder):
-            feature = self.encoder.get_intermediate_layers(x, n=self.n_layers, reshape=True)
-            # save embeddings to compute collapse
-            embeds = feature[0]
-            # Decoder combines multiple layers of the encoder. Each layer's output is the patch tokens
-            logits = self.decoder(feature) # [Layer1, Layer2, Layer3, Layer4]
-            # Shape of logits is (batch_size, num_classes, height, width)
-
-        else:  # We use the linear decoder
-            feature_dict = self.encoder(x)
-
-            # get the patch embeddings - so we exclude the CLS token
-            # we also store them in variable to compute collapse
-            patch_embeddings = embeds = feature_dict["x_norm_patchtokens"]
-            
-            # Shape of logits is (batch_size, num_classes, height, width)
-            logits = self.decoder(patch_embeddings)
-            logits = F.interpolate(
-                logits,
-                size=x.shape[2:],
-                mode="bilinear",
-                align_corners=False,
-            )
+        feature = self.encoder.get_intermediate_layers(x, n=self.n_layers, reshape=True)
+        # save embeddings to compute collapse
+        embeds = feature[0]
+        # Decoder combines multiple layers of the encoder. Each layer's output is the patch tokens
+        logits = self.decoder(feature) # [Layer1, Layer2, Layer3, Layer4]
 
         return logits, embeds
