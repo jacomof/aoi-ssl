@@ -92,3 +92,7 @@ Mask convention:
 ## Citation
 
 If you use this repository, please cite the paper once the workshop proceedings are available.
+
+## Acknowledgements
+
+This repository is built on top of existing [ViT and DINO implementations](https://github.com/facebookresearch/dino/tree/main) by M. Caron et. al. The patch-level retrieval strategies are built on top of the [HummingBird implementation](https://github.com/vpariza/open-hummingbird-eval/tree/main) by V. Pariza. We thank the authors of these repositories for creating such high-quality and reproducible code.
