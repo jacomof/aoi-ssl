@@ -32,7 +32,7 @@ No proprietary data is included in this repository.
 - [retrieval](retrieval): patch and image-based retrieval
 - [pretrain](ssl): self-supervised training code
 - [tests](tests): exploratory notebooks
-- [tools](tools): utility scripts (including stub dataset generation)
+- [scripts](scripts): scripts to launch pre-training and fine-tuning experiments and guide the use of the pretrain.py and train.py
 
 ## Quick Start
 
