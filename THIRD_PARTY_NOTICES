@@ -11,6 +11,9 @@ Important
 ---------
 
 Files that include NVIDIA FasterViT copyright/license headers are subject to those upstream terms and are not relicensed by this project.
+The full NVIDIA Source Code License-NC text is stored in:
+
+- segmentation/models/faster_vit/NVIDIA_SOURCE_CODE_LICENSE_NC.txt
 
 File-by-file notice (segmentation/models/faster_vit)
 -----------------------------------------------------
