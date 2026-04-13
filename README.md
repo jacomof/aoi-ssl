@@ -40,7 +40,7 @@ See `THIRD_PARTY_NOTICES` for a file-by-file provenance and licensing summary.
 - [segmentation](segmentation): segmentation models and ViT/FasterViT implementations
 - [retrieval](retrieval): patch and image-based retrieval
 - [pretrain](ssl): self-supervised training code
-- [tests](tests): exploratory notebooks
+- [tests](tests): exploratory notebooks showing usage and hyper-parameter tuning process for retrieval
 - [scripts](scripts): scripts to launch pre-training and fine-tuning experiments and guide the use of the pretrain.py and train.py
 
 ## 🚀 Quick Start
