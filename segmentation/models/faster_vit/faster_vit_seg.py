@@ -5,8 +5,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from segmentation.models.lora import LoRA
-from segmentation.models.vit.layers import PatchEmbed
-from segmentation.models.vit import VisionTransformer, init_vit
 from segmentation.models.upernet_decoder import UperNetDecoder
 from segmentation.models.faster_vit.faster_vit_any_res import FasterViT
 

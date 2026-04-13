@@ -1,7 +1,6 @@
 import os
 import argparse
 from pathlib import Path
-import signal
 
 import cv2
 import torch
@@ -10,7 +9,6 @@ import lightning.pytorch as pl
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.strategies.ddp import DDPStrategy
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
-
 
 import segmentation.utils as utils
 from pretrain.mae.lit_mae import LitMAE
@@ -179,14 +177,6 @@ def run_segmentation(
             check_on_train_epoch_end=False,
         ),
         utils.GradNormCallback(),
-        # KNNEvaluationCallback(
-        #     batch_size=config.test_batch_size,
-        #     eval_data_path=config.eval_data_path,
-        #     classes=config.classes,
-        #     num_workers=config.num_workers,
-        #     input_resolution=config.input_resolution,
-        #     eval_frequency=config.knn_eval_frequency,
-        # ),
     ]
 
 

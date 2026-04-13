@@ -1,6 +1,4 @@
 import torch
-import numpy as np
-import torch.nn as nn
 
 from segmentation.models.vit import init_vit
 from segmentation.models.vit.downsample_vit import DownsampleVisionTransformer 

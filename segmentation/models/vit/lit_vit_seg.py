@@ -1,8 +1,5 @@
 from typing import Any
 
-import math
-from collections.abc import Iterable
-
 from torch import optim
 import torch
 import torch.nn.functional as F
@@ -200,7 +197,7 @@ class LitViTSegmentation(PLBaseModel, SegmentationLoggerMixin):
             context="test",
         )
         self.log_dict({"test/loss": loss, **metrics})
-        
+
         return loss
 
     def _initialize_optimizer_reversed_decay(self, decayed_lr: bool = True):
