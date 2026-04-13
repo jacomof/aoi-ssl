@@ -11,7 +11,8 @@ AOI-SSL is a self-supervised learning and fine-tuning pipeline for industrial vi
 - self-supervised pretraining components (MAE/DINO/iBOT-style modules),
 - downstream segmentation models (ViT and FasterViT variants),
 - retrieval-style evaluation utilities (kNN-based segmentation retrieval),
-- configurable experiment setups under [configs](configs).
+- configurable experiment setups under [configs](configs),
+- experiment tracking using MLFlow.
 
 ## Confidentiality And Public Release Scope
 

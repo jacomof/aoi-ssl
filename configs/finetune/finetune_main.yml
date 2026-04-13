@@ -1,8 +1,6 @@
 # Store all tracking, and dataset parameters unrelated to pipeline and model 
 # optimization.
 
-# FOR TRAINNG DDRNET
-
 # Experiment tracking
 # MLFlow Experiment name
 name: aoi-pretrain-dino
