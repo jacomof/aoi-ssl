@@ -1,7 +1,6 @@
 from pathlib import Path
 from functools import partial
 from typing import Optional, Callable
-import os
 import numpy as np
 
 import cv2

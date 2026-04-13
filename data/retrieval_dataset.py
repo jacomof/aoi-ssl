@@ -75,9 +75,11 @@ class RetrievalDataset(Dataset):
         image, class_mask = apply_transform(self.transform, image, class_mask)
 
         class_mask_tensor = to_class_mask_tensor(class_mask)
+        
         sample = {
             "image": to_image_tensor(image),
             "class_mask": class_mask_tensor,
+            # Uncomment if ignore masks are available and should be used in training
             #"ignore_mask": torch.zeros_like(class_mask_tensor),
         }
 
