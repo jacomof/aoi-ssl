@@ -27,56 +27,58 @@ No proprietary data is included in this repository.
 ## Repository Structure
 
 - [configs](configs): pretraining and fine-tuning YAML configurations
-- [data](data): Lightning data modules
-- [segmentation](segmentation): segmentation models and compatibility modules
-- [retrieval](retrieval): kNN retrieval-based evaluation utilities
-- [ssl](ssl): copied self-supervised training code from internal experiments
+- [data](data): Lightning data modules and pytorch datasets
+- [segmentation](segmentation): segmentation models and ViT/FasterViT implementations
+- [retrieval](retrieval): patch and image-based retrieval
+- [pretrain](ssl): self-supervised training code
 - [tests](tests): exploratory notebooks
 - [tools](tools): utility scripts (including stub dataset generation)
 
 ## Quick Start
 
 1. Install dependencies in your environment (PyTorch, Lightning, Albumentations, OpenCV, TorchMetrics, timm, etc.).
-2. Generate synthetic stub datasets:
-
-```bash
-python tools/create_stub_datasets.py --output datasets
-```
-
+2. Generate MNIST stub dataset by running the download_mnist_preprocess.ipynb jupyter notebook
 3. Point config files to your dataset/checkpoint paths if needed.
 4. Run your chosen pretraining or fine-tuning entrypoint.
 
 ## Stub Dataset Layout
 
-The default public-friendly image-based layout is:
+The default stub ImageNet-based dataset layout is:
 
 ```text
-datasets/
-	pretrain_with_unlabelled/
-		train/*.png
-		val/*.png
-		test/*.png
-	pretrain_split/
-		train/sample_0000.png
-		train/sample_0000_mask.png
-		val/sample_0000.png
-		val/sample_0000_mask.png
-		test/sample_0000.png
-		test/sample_0000_mask.png
-	semantic_split/
-		train/*.png + *_mask.png
-		val/*.png + *_mask.png
-		test/*.png + *_mask.png
+datasets/MNIST
+	pretrain/
+		train/
+			sample_buffer0.png
+			sample_buffer1.png
+		val/
+			sample_buffer0.png
+			sample_buffer1.png
+	finetune/
+		train/
+			image/
+				sample_buffer0.png
+				sample_buffer1.png
+			lbl/
+				sample.png
+		val/
+			image/
+				sample_buffer0.png
+				sample_buffer1.png
+			lbl/
+				sample.png
+		test/
+			image/
+				sample_buffer0.png
+				sample_buffer1.png
+			lbl/
+				sample.png
 ```
 
 Mask convention:
 
 - single-channel label maps with integer class IDs,
 - classes are configured via `classes` in YAML (default: wire/ball/wedge/epoxy).
-
-## Notes On Compatibility
-
-This release includes compatibility shims for legacy `segmentation.*` import paths used in internal notebooks and scripts. These shims are intended to keep common workflows importable in the cleaned public structure.
 
 ## Citation
 
