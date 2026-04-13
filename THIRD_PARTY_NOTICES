@@ -1,0 +1,52 @@
+THIRD-PARTY NOTICES
+===================
+
+This document summarizes third-party code usage and licensing provenance for files in:
+
+- segmentation/models/faster_vit/
+
+This project includes code under mixed licensing terms. The repository-level LICENSE file applies to original project code unless a file contains a different upstream copyright/license notice.
+
+Important
+---------
+
+Files that include NVIDIA FasterViT copyright/license headers are subject to those upstream terms and are not relicensed by this project.
+
+File-by-file notice (segmentation/models/faster_vit)
+-----------------------------------------------------
+
+1) segmentation/models/faster_vit/__init__.py
+- Provenance: project package initializer.
+- Copyright/license header in file: none.
+- Notes: file is currently empty/whitespace-only.
+
+2) segmentation/models/faster_vit/faster_vit.py
+- Provenance: derived from NVIDIA FasterViT code.
+- Copyright/license header in file: NVIDIA CORPORATION (2023).
+- Applicable terms: NVIDIA header terms in the file.
+- Redistribution/use note: remains governed by upstream NVIDIA terms.
+
+3) segmentation/models/faster_vit/faster_vit_any_res.py
+- Provenance: derived from NVIDIA FasterViT code (adapted for any-resolution usage).
+- Copyright/license header in file: NVIDIA CORPORATION (2023).
+- Applicable terms: NVIDIA header terms in the file.
+- Redistribution/use note: remains governed by upstream NVIDIA terms.
+
+4) segmentation/models/faster_vit/faster_vit_seg.py
+- Provenance: authored in this repository by AOI-SSL maintainers.
+- Copyright/license header in file: none.
+- Applicable terms: repository LICENSE.
+- Notes: this file integrates with FasterViT components and therefore depends on code in files that carry NVIDIA terms.
+
+5) segmentation/models/faster_vit/lit_faster_vit_seg.py
+- Provenance: authored in this repository by AOI-SSL maintainers.
+- Copyright/license header in file: none.
+- Applicable terms: repository LICENSE.
+- Notes: this file integrates with FasterViT components and therefore depends on code in files that carry NVIDIA terms.
+
+Attribution and compliance
+--------------------------
+
+- Keep all upstream copyright/license headers intact.
+- When redistributing, include this THIRD_PARTY_NOTICES file and the upstream notices present in source files.
+- For any commercial or broader redistribution scenario, review the exact upstream NVIDIA terms with legal counsel before release.

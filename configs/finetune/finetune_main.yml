@@ -2,21 +2,17 @@
 # optimization.
 
 # Experiment tracking
-# MLFlow Experiment name
-name: aoi-pretrain-dino
 # Current experiment number
 experiment_n: 2 
 # MLFlow tracking uri
 tracking_uri: "http://localhost:5000"
 
 # Dataset variables
-crop_size: 512 
+crop_size: 512
 classes: ["class_0", "class_1"]
+data_path: "./datasets/MNIST/pretrain/"
 
-dataset_name: "0_6_57"
-data_path: "./datasets/pretrain_split/"
-
-# Mostly fixed training variables
+# Monitoring and logging
 seed: 42
 monitor: "val/loss"
 patience: 500

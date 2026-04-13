@@ -1,11 +1,12 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
+# This file includes code adapted from Meta Platforms, Inc. and affiliates:
+# https://github.com/facebookresearch/dino
 #
-# This source code is licensed under the Apache License, Version 2.0
-# found in the LICENSE file in the root directory of this source tree.
+# Original code license: Apache License 2.0.
+# You may obtain a copy of the license in this repository's LICENSE file.
 
-# References:
-#   https://github.com/facebookresearch/dino/blob/master/vision_transformer.py
-#   https://github.com/rwightman/pytorch-image-models/tree/master/timm/layers/mlp.py
+# Modifications in this repository:
+# - Added support for xFormers.
+# - Reorganized and split into components.
 
 
 from typing import Callable, Optional

@@ -7,12 +7,8 @@ import numpy as np
 import albumentations as A
 import lightning.pytorch as pl
 from torch.utils.data import DataLoader, WeightedRandomSampler
-from torch.utils.data.distributed import DistributedSampler
 
 from data import PretrainDataset
-
-
-
 
 
 class PretrainDataModuleDino(pl.LightningDataModule):
@@ -90,7 +86,7 @@ class PretrainDataModuleDino(pl.LightningDataModule):
                 with evaluation pad and center crop transforms.
         """
 
-        #Note: stage not implemented yet
+        # Note: stage not implemented yet
         self.stage = stage
 
         # Only center cropped if a input resolution is specified.
@@ -116,17 +112,14 @@ class PretrainDataModuleDino(pl.LightningDataModule):
             transform=self.transform,
             return_filename=self.return_filename,
         )
-        
+
         self.aoi_test = PretrainDataset(
             Path(self.data_path) / "test",
             transform=self.eval_transform,
-            return_filename=self.return_filename
+            return_filename=self.return_filename,
         )
 
     def train_dataloader(self) -> DataLoader:
-
-        #sampler = DistributedSampler(self.aoi_train, shuffle=True, seed=self.seed) if self.trainer and self.trainer.strategy in ["ddp", "ddp_spawn"] else None
-        #print(f"Sampler: {sampler}")
 
         return DataLoader(
             self.aoi_train,

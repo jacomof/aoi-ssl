@@ -1,7 +1,6 @@
 from pathlib import Path
 from functools import partial
 from typing import Optional, Callable
-import os
 import numpy as np
 
 import cv2
@@ -11,7 +10,6 @@ from torch.utils.data import DataLoader
 
 from data.retrieval_dataset import RetrievalDataset
 from data.image_tiling import slice_image_to_tiles
-
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
 
@@ -30,7 +28,6 @@ def _list_split_images(split_path: Path) -> list[Path]:
             continue
         images.append(p)
     return sorted(images)
-
 
 
 class RetrievalDataModuleFixedSplit(pl.LightningDataModule):
@@ -107,16 +104,16 @@ class RetrievalDataModuleFixedSplit(pl.LightningDataModule):
             std=[0.22236, 0.27070],
         )
 
-
         # List images and split them into train and val
         self.train_img_list = _list_split_images(self.data_path / self.train_dir)
-
 
         self.val_img_list = _list_split_images(self.data_path / self.val_dir)
 
         if self.holdout_dir:
             # List holdout images
-            self.holdout_img_list = _list_split_images(self.data_path / self.holdout_dir)
+            self.holdout_img_list = _list_split_images(
+                self.data_path / self.holdout_dir
+            )
 
         self.eval_transform = eval_transform
         if self.input_resolution and not eval_transform:
@@ -139,42 +136,45 @@ class RetrievalDataModuleFixedSplit(pl.LightningDataModule):
 
         if transform:
             # If the transform is provided, it will be used for training
-            print("Using provided transform for training.")
             self.transform = transform
 
         elif augmented:
             self.transform = A.Compose(
-            [
-                A.PadIfNeeded(
-                    min_height=self.input_resolution[0],
-                    min_width=self.input_resolution[1],
-                    # Avoids reflective padding
-                    border_mode=cv2.BORDER_CONSTANT,
-                    value=(0, 0, 0),
-                    p=1,
-                ),
-                A.SomeOf(
-                    [
-                        A.VerticalFlip(p=0.5),
-                        A.HorizontalFlip(p=0.5),
-                        A.GaussianBlur(sigma_limit=0.75),
-                        A.RandomContrast(),
-                        A.GaussNoise(var_limit=(0.05, 0.05 * 255)),
-                        A.RandomRotate90(),
-                        A.Affine(scale=(0.5, 2.0)),
-                        A.Affine(rotate=(-45, 45)),
-                        A.Affine(shear=(-8, 8)),
-                        A.RandomGamma(gamma_limit=(80, 120), p=0.5),
-                    ],
-                    3,
-                ),
-                A.OneOrOther(
-                    A.CropNonEmptyMaskIfExists(self.input_resolution[0], self.input_resolution[1]),
-                    A.RandomCrop(self.input_resolution[0], self.input_resolution[1]),
-                    p=0.8,
-                ),
-            ]
-        )
+                [
+                    A.PadIfNeeded(
+                        min_height=self.input_resolution[0],
+                        min_width=self.input_resolution[1],
+                        # Avoids reflective padding
+                        border_mode=cv2.BORDER_CONSTANT,
+                        value=(0, 0, 0),
+                        p=1,
+                    ),
+                    A.SomeOf(
+                        [
+                            A.VerticalFlip(p=0.5),
+                            A.HorizontalFlip(p=0.5),
+                            A.GaussianBlur(sigma_limit=0.75),
+                            A.RandomContrast(),
+                            A.GaussNoise(var_limit=(0.05, 0.05 * 255)),
+                            A.RandomRotate90(),
+                            A.Affine(scale=(0.5, 2.0)),
+                            A.Affine(rotate=(-45, 45)),
+                            A.Affine(shear=(-8, 8)),
+                            A.RandomGamma(gamma_limit=(80, 120), p=0.5),
+                        ],
+                        3,
+                    ),
+                    A.OneOrOther(
+                        A.CropNonEmptyMaskIfExists(
+                            self.input_resolution[0], self.input_resolution[1]
+                        ),
+                        A.RandomCrop(
+                            self.input_resolution[0], self.input_resolution[1]
+                        ),
+                        p=0.8,
+                    ),
+                ]
+            )
         else:
             self.transform = A.Compose(
                 [
@@ -192,7 +192,7 @@ class RetrievalDataModuleFixedSplit(pl.LightningDataModule):
                     ),
                 ]
             )
-        
+
         if self.normalize:
             self.transform = A.Compose(
                 [
@@ -207,8 +207,6 @@ class RetrievalDataModuleFixedSplit(pl.LightningDataModule):
                     self.normalization,
                 ]
             )
-
-
 
     def setup(self, stage: str):
         """Generate the type of the dataloaders depending on the stage.

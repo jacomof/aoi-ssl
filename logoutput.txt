@@ -1,0 +1,62 @@
+Config.model is:  vit
+Final configuration:  <class 'segmentation.models.vit.lit_vit_seg.LitViTSegmentation'>
+Data module setup complete.
+Using pretrained encoder from checkpoint.
+double view is  False
+Configuration after merge:  Namespace(name='aoi-pretrain-dino', experiment_n=2, tracking_uri='http://localhost:5000', crop_size=512, classes=['class_0', 'class_1'], dataset_name='0_6_57', data_path='./datasets/MNIST/finetune/', seed=42, monitor='val/loss', patience=500, log_every_n=40, check_val_every_n=3, epochs=10, batch_size=8, strategy='auto', num_workers=1, gradient_clip_val=5.0, precision='16-mixed', accumulate_grad_batches=1, input_resolution=[512, 512], model='vit', model_params={'lr': 0.001, 'min_lr': 5e-07, 'img_size': 512, 'mask_ratio': 0.4, 'warmup_steps': 5, 'in_chans': 2, 'vit_type': 't', 'patch_size': 16, 'reg_tokens': 0, 'num_classes': 2, 'weight_decay': 0.05, 'layer_decay': 0.75, 'use_annealing_lr': True, 'use_decay_lr': True, 'decoder_cls': 'upernet', 'freeze_encoder': False, 'encoder_type': 'vit', 'double_view': False}, encoder_ckpt_path='./checkpoints/aoi-pretrain-mae/epoch=109-val_loss=0.000.ckpt', encoder_ckpt_model_params='./configs/pretrain/pretrain_vit_mae_only_model_config.yml', run_key='finetune_mae_limited_epochs', path=PosixPath('checkpoints/aoi-pretrain-dino'), model_config='./configs/finetune/finetune_vit_mae_only.yml', config='./configs/finetune/finetune_main.yml', job_id='', run_name='vit-finetune_mae_limited_epochs')
+Using MAE decoder:  True
+Learning rate: 0.00015
+Embed dim in upernet decoder:  384
+Using FPN inplanes:  None
+FPN inplanes:  (384, 384, 384, 384)
+Pool scales:  (2, 4, 8, 16)
+Using Binary Cross Entropy loss.
+Double view is in LitVitSeg:  False
+Successfully created LitVitSegmentation model.
+Successfully loaded MAE model.
+Epochs:  10
+About to launch training loop!
+Using cosine annealing learning rate scheduler.
+Using standard optimizer settings.
+Using decayed learning rate with layer decay.
+Number of blocks in encoder: 1
+Parameter groups for optimizer:
+Group 0: LR = 0.001
+Group 1: LR = 0.00075
+Group 2: LR = 0.001
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type             ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ model        │ ViTSegmentation  │ 18.2 M │ train │     0 │
+│ 1 │ ap_classwise │ ClasswiseWrapper │      0 │ train │     0 │
+└───┴──────────────┴──────────────────┴────────┴───────┴───────┘
+Trainable params: 18.2 M                                                                                                                                      
+Non-trainable params: 0                                                                                                                                       
+Total params: 18.2 M                                                                                                                                          
+Total estimated model params size (MB): 72                                                                                                                    
+Modules in train mode: 177                                                                                                                                    
+Modules in eval mode: 0                                                                                                                                       
+Total FLOPs: 0                                                                                                                                                
+Y_hat shape:  torch.Size([8, 512, 512, 2])
+Target shape: torch.Size([2097152, 2])
+Target shape: torch.Size([2097152, 2])
+Metrics for val: {'val/iou_class_0': 0.0, 'val/iou_class_1': 0.0, 'val/iou': tensor(0.)}
+Y_hat shape:  torch.Size([8, 512, 512, 2])
+Target shape: torch.Size([2097152, 2])
+Target shape: torch.Size([2097152, 2])
+Metrics for val: {'val/iou_class_0': 0.0, 'val/iou_class_1': 0.0, 'val/iou': tensor(0.)}
+Y_hat shape:  torch.Size([8, 512, 512, 2])
+Target shape: torch.Size([2097152, 2])
+Target shape: torch.Size([2097152, 2])
+Metrics for val: {'val/iou_class_0': 0.0, 'val/iou_class_1': 0.0, 'val/iou': tensor(0.)}
+Y_hat shape:  torch.Size([8, 512, 512, 2])
+Target shape: torch.Size([2097152, 2])
+Target shape: torch.Size([2097152, 2])
+Metrics for val: {'val/iou_class_0': 0.0, 'val/iou_class_1': 0.0, 'val/iou': tensor(0.)}
+Y_hat shape:  torch.Size([8, 512, 512, 2])
+Target shape: torch.Size([2097152, 2])
+Target shape: torch.Size([2097152, 2])
+Metrics for val: {'val/iou_class_0': 0.0, 'val/iou_class_1': 0.0, 'val/iou': tensor(0.)}
+Epoch 0/9                                           0/26 0:00:02 • -:--:-- 0.00it/s v_num: b_25
+🏃 View run vit-finetune_mae_limited_epochs at: http://localhost:5000/#/experiments/556121888233684473/runs/8d1baa90dac24ce0bcab78a77647b1eb
+🧪 View experiment at: http://localhost:5000/#/experiments/556121888233684473

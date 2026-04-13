@@ -16,12 +16,9 @@ import segmentation.utils as utils
 from segmentation.models.faster_vit.lit_faster_vit_seg import LitFasterViTSegmentation
 from segmentation.models.vit.lit_vit_seg import LitViTSegmentation
 from pretrain.mae.lit_mae import LitMAE
-from pretrain.dino.lit_mae_dino import LitMAEDino
 from data.semantic_module import SemanticDataModule
-from pretrain.dino.pretrain_dino import DataAugmentationDINO, GaussianBlur, Solarization, ColorJitterFor2Channel, ClipTo01
-from data.pretrain_module_ibot import DataAugmentationiBot
-from data.retrieval_module import RetrievalDataModule
 from segmentation.models.vit import init_vit
+
 
 def run_segmentation(
     config: argparse.Namespace,
@@ -30,7 +27,6 @@ def run_segmentation(
     torch.set_float32_matmul_precision("medium")
     pl.seed_everything(config.seed)
 
-    # Fixed augmentation pipeline by Joris/Thomas
     crop_size_0 = tuple(config.input_resolution)[0]
     crop_size_1 = tuple(config.input_resolution)[1]
     transform = A.Compose(
@@ -65,17 +61,6 @@ def run_segmentation(
         ]
     )
 
-    # datamodule = RetrievalDataModule(
-    #     config.data_path,
-    #     config.batch_size,
-    #     config.classes,
-    #     transform=transform,
-    #     num_workers=config.num_workers,
-    #     input_resolution=tuple(config.input_resolution) if not None else None,
-    #     random_seed=config.seed,
-    #     normalize=False
-    # )
-
     datamodule = SemanticDataModule(
         config.batch_size,
         config.data_path,
@@ -88,7 +73,6 @@ def run_segmentation(
     )
 
     datamodule.setup(stage="fit")
-    print("Data module setup complete.")
 
     loggers = utils.get_loggers(
         job_id=config.job_id,
@@ -99,21 +83,14 @@ def run_segmentation(
         experiment_name=config.name,
     )
 
-    
-
     if hasattr(config, "use_dinov2") and config.use_dinov2:
         # For training DinoV2
         print("Using DinoV2 encoder")
-        encoder = torch.hub.load(
-            'facebookresearch/dinov2', 
-            'dinov2_vits14'
-        )
+        encoder = torch.hub.load("facebookresearch/dinov2", "dinov2_vits14")
         print("DinoV2 info: \n", encoder)
         model = seg_model(parameters=config.model_params, classes=config.classes)
 
-        model.model.set_encoder(
-            encoder, freeze_encoder=False, use_dinov2=True
-        )
+        model.model.set_encoder(encoder, freeze_encoder=False, use_dinov2=True)
     elif (
         hasattr(config, "encoder_ckpt_path")
         and hasattr(config, "encoder_ckpt_model_params")
@@ -136,11 +113,12 @@ def run_segmentation(
             "fastervit": MaskedAutoencoderFasterVit,
         }
         encoder_cls = encoder_cls_map.get(config.model, MaskedAutoencoder)
-        print("Configuration after merge: ", config)
+
         mae = LitMAE.load_from_checkpoint(
-            config.encoder_ckpt_path, parameters=config_mae.model_params,
+            config.encoder_ckpt_path,
+            parameters=config_mae.model_params,
             model=encoder_cls,
-            strict=False
+            strict=False,
         )
         encoder = mae.get_encoder()
         config.model_params["embed_dim"] = encoder.embed_dim
@@ -149,8 +127,6 @@ def run_segmentation(
         # Moved set_encoder outside of constructor so that the encoder is not initialized two times
         model.model.set_encoder(encoder=encoder, freeze_encoder=False)
 
-        print("Successfully loaded MAE model.")
-
     else:
         print("Using ViT from scratch.")
         # For training from scratch
@@ -158,10 +134,9 @@ def run_segmentation(
         encoder = init_vit(
             config.model_params["vit_type"],
             num_register_tokens=config.model_params["reg_tokens"],
-            **config.model_params
+            **config.model_params,
         )
         model.model.set_encoder(encoder=encoder, freeze_encoder=False)
-        print("Successfully initialized segmentation model.")
 
     # Create callbacks
     ckpt_callback = ModelCheckpoint(
@@ -206,12 +181,12 @@ def run_segmentation(
         num_sanity_val_steps=5,
         precision=config.precision,
         sync_batchnorm=True,
-        accumulate_grad_batches=config.accumulate_grad_batches
-        if hasattr(config, "accumulate_grad_batches")
-        else 1,
+        accumulate_grad_batches=(
+            config.accumulate_grad_batches
+            if hasattr(config, "accumulate_grad_batches")
+            else 1
+        ),
     )
-
-    print("About to launch training loop!")
 
     trainer.fit(model=model, datamodule=datamodule)
 
@@ -258,23 +233,20 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--dataset_name",
-        type=str,
-    )
-    parser.add_argument(
         "--data_path",
         type=str,
+        help="Path to the dataset. Should be in the format of a folder with train/val/test subfolders, each containing class subfolders.",
     )
 
-    # Training parameters
-    # Overides the config if passed.
     parser.add_argument(
         "--model",
         type=str,
+        help="Name of the segmentation model to train.",
     )
     parser.add_argument(
         "--epochs",
         type=int,
+        help="Number of epochs to train.",
     )
     args = parser.parse_args()
 
@@ -288,14 +260,13 @@ if __name__ == "__main__":
     # model saved in args.path + experiment_name + job_id
     config.path = args.path / f"{config.name}"
     config.path.mkdir(exist_ok=True, parents=True)
+    print(f"Logging to: {config.path}")
 
     # Select model
     models = {
         "fastervit": LitFasterViTSegmentation,
         "vit": LitViTSegmentation,
     }
-    print("Config.model is: ", config.model)
-    print("Final configuration: ", models[config.model.lower()])
 
     config.run_name = f"{args.model.lower()}-{config.run_key}"
     run_segmentation(config, models[config.model.lower()])

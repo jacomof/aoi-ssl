@@ -1,4 +1,3 @@
-
 import os
 import argparse
 from pathlib import Path
@@ -7,8 +6,6 @@ from pathlib import Path
 import cv2
 import torch
 import albumentations as A
-from albumentations.pytorch import ToTensorV2
-from torchvision import transforms
 import lightning.pytorch as pl
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.strategies.ddp import DDPStrategy
@@ -20,13 +17,11 @@ import segmentation.utils as utils
 from pretrain.mae.lit_mae import LitMAE
 from pretrain.dino.lit_mae_dino import LitMAEDino
 from data.pretrain_module_dino import PretrainDataModuleDino
-from data.semantic_module import SemanticDataModule
-from data.retrieval_module import RetrievalDataModule  
+from data.retrieval_module import RetrievalDataModule
 import warnings
 
 # Evaluation imports
 from retrieval.knn_seg import KNNSegmentation
-
 
 # Imports to seed everything
 import random
@@ -38,36 +33,47 @@ class GaussianBlur(A.GaussianBlur):
     """
     Apply Gaussian Blur to the PIL image.
     """
+
     def __init__(self, radius_min=0.1, radius_max=2.0, **kwargs):
         super().__init__(sigma_limit=(radius_min, radius_max), **kwargs)
-        
+
 
 class Solarization(A.ImageOnlyTransform):
     """
     Apply Solarization to the PIL image.
 
-    Remove 
+    Remove
     """
+
     def __init__(self, p=0.5, **kwargs):
         super().__init__(**kwargs)
         self.prob = p
 
     def apply(self, img, **params):
-        do_it = random.random() <= self.prob 
+        do_it = random.random() <= self.prob
         if not do_it:
-             return img
+            return img
         else:
             return A.solarize(img)
-        
+
+
 class ColorJitterFor2Channel(A.ImageOnlyTransform):
     """
     Apply ColorJitter to 2-channel images by adding a dummy channel.
     """
+
     def __init__(self, brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8):
         super().__init__(always_apply=False, p=p)
-        self.color_jitter = A.Compose([
-            A.ColorJitter(brightness=brightness, contrast=contrast, saturation=saturation, hue=hue)
-        ])
+        self.color_jitter = A.Compose(
+            [
+                A.ColorJitter(
+                    brightness=brightness,
+                    contrast=contrast,
+                    saturation=saturation,
+                    hue=hue,
+                )
+            ]
+        )
 
     def apply(self, img, **params):
         # Add a dummy channel to make it 3-channel
@@ -82,37 +88,40 @@ class ColorJitterFor2Channel(A.ImageOnlyTransform):
         img = img[..., :2]  # Keep only the first two channels
         return img
 
+
 class ClipTo01(A.ImageOnlyTransform):
     def apply(self, img, **params):
         return img.clip(0.0, 1.0).astype(np.float32)
 
 
-
 class DataAugmentationDINO(object):
 
-    def __init__(self, global_crops_scale, local_crops_scale, local_crops_number, base_augmentations=False, normalize=False):
-
-        if base_augmentations:
-            print("Using base augmentations for DINO pretraining.")
+    def __init__(
+        self,
+        global_crops_scale,
+        local_crops_scale,
+        local_crops_number,
+        base_augmentations=False,
+        normalize=False,
+    ):
 
         normalization = A.Normalize(
             mean=[0.1570, 0.2096],  # Pretrain dataset mean
-            std=[0.2221, 0.27701]   # Pretrain dataset std
+            std=[0.2221, 0.27701],  # Pretrain dataset std
         )
 
         self.normalization = normalization
 
-        flip_and_color_jitter = A.Compose([
-            A.HorizontalFlip(p=0.5),
-            ColorJitterFor2Channel(brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8)
-        ])
+        flip_and_color_jitter = A.Compose(
+            [
+                A.HorizontalFlip(p=0.5),
+                ColorJitterFor2Channel(
+                    brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8
+                ),
+            ]
+        )
 
-        old_normalize = A.Compose([
-            A.Normalize((0.485, 0.456), (0.229, 0.224)), # A.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-            ToTensorV2()
-        ])
-
-        old_augmentations1 = [            
+        old_augmentations1 = [
             flip_and_color_jitter,
             A.GaussianBlur(p=1.0),
         ]
@@ -157,37 +166,51 @@ class DataAugmentationDINO(object):
             ),
         ]
 
-        augmentations1 = old_augmentations1 if base_augmentations else new_augmentations1
-        augmentations2 = old_augmentations2 if base_augmentations else new_augmentations2
+        augmentations1 = (
+            old_augmentations1 if base_augmentations else new_augmentations1
+        )
+        augmentations2 = (
+            old_augmentations2 if base_augmentations else new_augmentations2
+        )
 
         if normalize:
-            print("Normalization is enabled. Adding normalization transform.")
             augmentations1.append(normalization)
             augmentations2.append(normalization)
 
         augmentations1 = A.Compose(augmentations1)
         augmentations2 = A.Compose(augmentations2)
 
-
         # first global crop
-        self.global_transfo1 = A.Compose([
-            A.RandomResizedCrop(224, 224, scale=global_crops_scale, interpolation=cv2.INTER_CUBIC),
-            ClipTo01(p=1.0),  # Clip to [0, 1] range
-            augmentations1
-        ])
+        self.global_transfo1 = A.Compose(
+            [
+                A.RandomResizedCrop(
+                    224, 224, scale=global_crops_scale, interpolation=cv2.INTER_CUBIC
+                ),
+                ClipTo01(p=1.0),  # Clip to [0, 1] range
+                augmentations1,
+            ]
+        )
         # second global crop
-        self.global_transfo2 = A.Compose([
-            A.RandomResizedCrop(224, 224, scale=global_crops_scale, interpolation=cv2.INTER_CUBIC),
-            ClipTo01(p=1.0),  # Clip to [0, 1] range
-            augmentations2
-        ])
+        self.global_transfo2 = A.Compose(
+            [
+                A.RandomResizedCrop(
+                    224, 224, scale=global_crops_scale, interpolation=cv2.INTER_CUBIC
+                ),
+                ClipTo01(p=1.0),  # Clip to [0, 1] range
+                augmentations2,
+            ]
+        )
         # transformation for the local small crops
         self.local_crops_number = local_crops_number
-        self.local_transfo = A.Compose([
-            A.RandomResizedCrop(96, 96, scale=local_crops_scale, interpolation=cv2.INTER_CUBIC),
-            ClipTo01(p=1.0),  # Clip to [0, 1] range
-            augmentations1
-        ])
+        self.local_transfo = A.Compose(
+            [
+                A.RandomResizedCrop(
+                    96, 96, scale=local_crops_scale, interpolation=cv2.INTER_CUBIC
+                ),
+                ClipTo01(p=1.0),  # Clip to [0, 1] range
+                augmentations1,
+            ]
+        )
 
     def __call__(self, image):
 
@@ -200,24 +223,32 @@ class DataAugmentationDINO(object):
 
 
 class KNNEvaluationCallback(pl.Callback):
-    def __init__(self, batch_size, eval_data_path, classes, num_workers, input_resolution, eval_frequency):
+    def __init__(
+        self,
+        batch_size,
+        eval_data_path,
+        classes,
+        num_workers,
+        input_resolution,
+        eval_frequency,
+    ):
 
         self.transform = A.Compose(
-                [
-                    A.PadIfNeeded(
-                        min_height=input_resolution[0],
-                        min_width=input_resolution[1],
-                        # Avoids reflective padding
-                        border_mode=cv2.BORDER_CONSTANT,
-                        value=(0, 0, 0),
-                        p=1,
-                    ),
-                    A.CenterCrop(
-                        input_resolution[0],
-                        input_resolution[1],
-                    ),
-                ]
-            )
+            [
+                A.PadIfNeeded(
+                    min_height=input_resolution[0],
+                    min_width=input_resolution[1],
+                    # Avoids reflective padding
+                    border_mode=cv2.BORDER_CONSTANT,
+                    value=(0, 0, 0),
+                    p=1,
+                ),
+                A.CenterCrop(
+                    input_resolution[0],
+                    input_resolution[1],
+                ),
+            ]
+        )
         self.eval_module = RetrievalDataModule(
             data_path=eval_data_path,
             batch_size=batch_size,
@@ -227,28 +258,21 @@ class KNNEvaluationCallback(pl.Callback):
             return_manufacturer=True,
             return_device=True,
             input_resolution=(512, 512),
-            normalize=config.normalize
+            normalize=config.normalize,
         )
-        
+
         self.eval_module.setup(stage="fit")
         self.train_loader = self.eval_module.train_dataloader()
         self.val_dataloader = self.eval_module.val_dataloader()
-        print(f"Train loader length: {len(self.train_loader.dataset)}")
-        print(f"Validation loader length: {len(self.val_dataloader.dataset)}")
         self.classes = classes
         self.eval_frequency = eval_frequency
-        
-        
-    def on_train_epoch_end(self, trainer, pl_module:LitMAE):
-        
-        print(f"Epoch {trainer.current_epoch} - Checking if KNN evaluation should be run...")
-        print(f"Evaluation frequency is set to {self.eval_frequency}.")
+
+    def on_train_epoch_end(self, trainer, pl_module: LitMAE):
+
         if trainer.current_epoch % self.eval_frequency != 0:
-            print(f"Skipping KNN evaluation for epoch {trainer.current_epoch} as it is not a multiple of {self.eval_frequency}.")
+            # Skip evaluation if it's not the right epoch
             return
-        print(f"Running KNN evaluation for epoch {trainer.current_epoch}...")
-        
-        
+
         # Perform evaluation here
         knn_model = KNNSegmentation(
             encoder=pl_module.get_encoder(),
@@ -258,9 +282,12 @@ class KNNEvaluationCallback(pl.Callback):
             profile_memory=True,
         )
 
-        mean_ious = knn_model.evaluate(k=3, distance_metric="cosine", weights="distance")
+        mean_ious = knn_model.evaluate(
+            k=3, distance_metric="cosine", weights="distance"
+        )
         mean_iou = sum(mean_ious.values()) / len(mean_ious)
         pl_module.log("val/knn_mean_iou", mean_iou)
+
 
 def run_segmentation(
     config: argparse.Namespace,
@@ -286,13 +313,6 @@ def run_segmentation(
         ),
     )
 
-        # Add this to both scripts after config creation
-    print("=== CONFIG DEBUG ===")
-    print(f"Tracking URI: {getattr(config, 'tracking_uri', 'NOT SET')}")
-    print(f"Experiment name: {getattr(config, 'name', 'NOT SET')}")
-    print(f"Run name: {getattr(config, 'run_name', 'NOT SET')}")
-    print(f"Job ID: {getattr(config, 'job_id', 'NOT SET')}")
-
     loggers = utils.get_loggers(
         job_id=config.job_id,
         tracking_uri=config.tracking_uri,
@@ -302,7 +322,6 @@ def run_segmentation(
         experiment_name=config.name,
         use_tb_logger=False,
     )
-
 
     model = LitMAEDino(parameters=config.model_params)
 
@@ -322,8 +341,10 @@ def run_segmentation(
     callbacks = [
         ckpt_callback,
         EarlyStopping(
-            patience=config.patience, monitor=config.monitor, mode="max" if config.monitor == "val/knn_mean_iou" else "min",
-            verbose=True
+            patience=config.patience,
+            monitor=config.monitor,
+            mode="max" if config.monitor == "val/knn_mean_iou" else "min",
+            verbose=True,
         ),
         utils.GradNormCallback(),
         KNNEvaluationCallback(
@@ -337,17 +358,20 @@ def run_segmentation(
         LearningRateMonitor(
             logging_interval="step",
             log_momentum=True,
-        )
+        ),
     ]
 
+    if hasattr(config, "accumulate_grad_batches"):
+        warnings.warn(
+            f"Accumulating gradients over {config.accumulate_grad_batches} batches."
+        )
 
-    if hasattr(config, 'accumulate_grad_batches'):
-        warnings.warn(f"Accumulating gradients over {config.accumulate_grad_batches} batches.")
-
-
-    check_val_every_n_epoch = config.check_val_every_n_epoch if hasattr(config, 'check_val_every_n_epoch') else 1
+    check_val_every_n_epoch = (
+        config.check_val_every_n_epoch
+        if hasattr(config, "check_val_every_n_epoch")
+        else 1
+    )
     if "knn_eval_frequency" in vars(config):
-        print(f"Using knn_eval_frequency: {config.knn_eval_frequency}")
         check_val_every_n_epoch = config.knn_eval_frequency
 
     trainer = pl.Trainer(
@@ -359,7 +383,7 @@ def run_segmentation(
         ),
         default_root_dir=str(config.path),
         log_every_n_steps=config.log_every_n,
-        gradient_clip_val=None, # Disable automatic gradient clipping as we're using manual optimization
+        gradient_clip_val=None,  # Disable automatic gradient clipping as we're using manual optimization
         check_val_every_n_epoch=check_val_every_n_epoch,
         logger=loggers,
         callbacks=callbacks,
@@ -368,12 +392,19 @@ def run_segmentation(
         num_sanity_val_steps=5,
         precision=config.precision,
         sync_batchnorm=True,
-        accumulate_grad_batches=config.accumulate_grad_batches if hasattr(config, 'accumulate_grad_batches') else None,
+        accumulate_grad_batches=(
+            config.accumulate_grad_batches
+            if hasattr(config, "accumulate_grad_batches")
+            else None
+        ),
         devices="auto",
         accelerator="gpu",
     )
-    trainer.fit(model=model, datamodule=datamodule, 
-                ckpt_path = config.ckpt_path if hasattr(config, "ckpt_path") else None,)
+    trainer.fit(
+        model=model,
+        datamodule=datamodule,
+        ckpt_path=config.ckpt_path if hasattr(config, "ckpt_path") else None,
+    )
 
 
 if __name__ == "__main__":
@@ -414,7 +445,6 @@ if __name__ == "__main__":
         help="Path to experiment specific YAML file",
     )
 
-
     parser.add_argument(
         "--data_path",
         type=str,
@@ -429,7 +459,7 @@ if __name__ == "__main__":
         "--data_collection_path",
         type=str,
         help="Path to log the training files, e.g. checkpoints",
-        default=None
+        default=None,
     )
 
     # Training parameters
@@ -450,30 +480,33 @@ if __name__ == "__main__":
         help="Batch size for testing",
     )
 
-    parser.add_argument("--ckpt_path", 
-        type=str,
-        default=None,
-        help="Path to model checkpoint"
+    parser.add_argument(
+        "--ckpt_path", type=str, default=None, help="Path to model checkpoint"
     )
 
-    parser.add_argument("--accumulate_grad_batches",
+    parser.add_argument(
+        "--accumulate_grad_batches",
         type=int,
         default=1,
-        help="Number of batches to accumulate before backprop. This is to support smaller patch sizes.")
+        help="Number of batches to accumulate before backprop. This is to support smaller patch sizes.",
+    )
 
-    parser.add_argument("--vit_type",
+    parser.add_argument(
+        "--vit_type",
         type=str,
         default=None,
         help="Type of ViT model to use",
     )
 
-    parser.add_argument("--reconstruction_loss_weight",
+    parser.add_argument(
+        "--reconstruction_loss_weight",
         type=float,
         default=0.5,
         help="Weight for the reconstruction loss",
     )
 
-    parser.add_argument("--dino_loss_weight",
+    parser.add_argument(
+        "--dino_loss_weight",
         type=float,
         default=0.5,
         help="Weight for the dino loss",
@@ -511,24 +544,17 @@ if __name__ == "__main__":
         "--normalize",
         action="store_true",
         help="Apply normalization to the images",
-        default=None,)
-    
-    parser.add_argument(
-        "--knn_eval_frequency",
-        type=int,
-        default=None
+        default=None,
     )
-    
+
+    parser.add_argument("--knn_eval_frequency", type=int, default=None)
+
     parser.add_argument(
         "--monitor",
         type=str,
     )
 
-    parser.add_argument(
-        "--patience",
-        type=int,
-        default=None
-    )
+    parser.add_argument("--patience", type=int, default=None)
 
     args = parser.parse_args()
 
@@ -538,15 +564,8 @@ if __name__ == "__main__":
 
     # Create repository after merging name from args and config
     config = utils.merge_config(args.config, args, args.model_config)
-    print("Config after merge: ", config)
     config.path = args.path / f"{config.name}"
-    print(config.path)
     config.path.mkdir(exist_ok=True, parents=True)
-    print("Is cuda available? ", torch.cuda.is_available())
     config.run_name = f"{config.job_id}-{config.run_key}"
-
-
-    print("Running pretraining with config:")
-    print(config)
 
     run_segmentation(config)

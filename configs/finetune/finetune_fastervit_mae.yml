@@ -1,3 +1,7 @@
+# Experiment Tracking
+# MLFlow Experiment name
+name: aoi-finetune-fastervit-mae
+
 # Training pipeline
 epochs: 100
 batch_size: 8
@@ -7,7 +11,7 @@ gradient_clip_val: 5.0
 precision: "16-mixed"
 accumulate_grad_batches: 1
 
-input_resolution: [512, 512]
+input_resolution: [512, 512] # must match img_size in model_params
 model: "fastervit"
 encoder_model: "mae" # Options: "ibot", "mae"
 
@@ -26,10 +30,9 @@ model_params:
   use_annealing_lr: True
   use_decay_lr: True
 
-  ##
-  img_size: 512
+  img_size: 512 # input image size for fixed resolution models
 
-  # Vit-B settings
+  # Encoder settings
   patch_size: 16
   reg_tokens: 0
   decoder_cls: "upernet"

@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from torch.utils.data import Dataset
-import torch
 
 from .common import (
     list_buffer_image_pairs,
@@ -68,19 +67,23 @@ class RetrievalDataset(Dataset):
         image = load_buffer_pair_image(channel_0_path, channel_1_path)
         h, w = image.shape[:2]
 
-        base_image_path = channel_0_path.with_name(f"{sample_stem}{channel_0_path.suffix}")
-        mask_path = find_label_for_image(base_image_path) or find_label_for_image(channel_0_path)
+        base_image_path = channel_0_path.with_name(
+            f"{sample_stem}{channel_0_path.suffix}"
+        )
+        mask_path = find_label_for_image(base_image_path) or find_label_for_image(
+            channel_0_path
+        )
         class_mask = load_mask(mask_path, h, w, num_classes=len(self.classes))
 
         image, class_mask = apply_transform(self.transform, image, class_mask)
 
         class_mask_tensor = to_class_mask_tensor(class_mask)
-        
+
         sample = {
             "image": to_image_tensor(image),
             "class_mask": class_mask_tensor,
             # Uncomment if ignore masks are available and should be used in training
-            #"ignore_mask": torch.zeros_like(class_mask_tensor),
+            # "ignore_mask": torch.zeros_like(class_mask_tensor),
         }
 
         if self.return_filename:

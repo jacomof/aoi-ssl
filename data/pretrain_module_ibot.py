@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Optional, Callable
+from typing import Optional
 
 import cv2
 import numpy as np
@@ -9,16 +9,14 @@ import lightning.pytorch as pl
 from torch.utils.data import DataLoader, WeightedRandomSampler
 
 from data.pretrain_dataset_ibot import PretrainDatasetiBot
-from albumentations.pytorch import ToTensorV2
-from torchvision import transforms
 
 import random
 import math
 
 
 import logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 
 # Translations, rotations, scaling - Test time adaptations
@@ -26,36 +24,47 @@ class GaussianBlur(A.GaussianBlur):
     """
     Apply Gaussian Blur to the PIL image.
     """
+
     def __init__(self, radius_min=0.1, radius_max=2.0, **kwargs):
         super().__init__(sigma_limit=(radius_min, radius_max), **kwargs)
-        
+
 
 class Solarization(A.ImageOnlyTransform):
     """
     Apply Solarization to the PIL image.
 
-    Remove 
+    Remove
     """
+
     def __init__(self, p=0.5, **kwargs):
         super().__init__(**kwargs)
         self.prob = p
 
     def apply(self, img, **params):
-        do_it = random.random() <= self.prob 
+        do_it = random.random() <= self.prob
         if not do_it:
-             return img
+            return img
         else:
             return A.solarize(img)
-        
+
+
 class ColorJitterFor2Channel(A.ImageOnlyTransform):
     """
     Apply ColorJitter to 2-channel images by adding a dummy channel.
     """
+
     def __init__(self, brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8):
         super().__init__(always_apply=False, p=p)
-        self.color_jitter = A.Compose([
-            A.ColorJitter(brightness=brightness, contrast=contrast, saturation=saturation, hue=hue)
-        ])
+        self.color_jitter = A.Compose(
+            [
+                A.ColorJitter(
+                    brightness=brightness,
+                    contrast=contrast,
+                    saturation=saturation,
+                    hue=hue,
+                )
+            ]
+        )
 
     def apply(self, img, **params):
         # Add a dummy channel to make it 3-channel
@@ -70,20 +79,29 @@ class ColorJitterFor2Channel(A.ImageOnlyTransform):
         img = img[..., :2]  # Keep only the first two channels
         return img
 
+
 class ClipTo01(A.ImageOnlyTransform):
     def apply(self, img, **params):
         return img.clip(0.0, 1.0).astype(np.float32)
 
+
 class DataAugmentationiBot(object):
 
-    def __init__(self, global_crops_scale, local_crops_scale, local_crops_number, patch_size, use_swin=False, mim_start_epoch=0, base_augmentations=False, normalize=False):
-
-        if base_augmentations:
-            print("Using base augmentations for DINO pretraining.")
+    def __init__(
+        self,
+        global_crops_scale,
+        local_crops_scale,
+        local_crops_number,
+        patch_size,
+        use_swin=False,
+        mim_start_epoch=0,
+        base_augmentations=False,
+        normalize=False,
+    ):
 
         normalization = A.Normalize(
             mean=[0.1570, 0.2096],  # Pretrain dataset mean
-            std=[0.2221, 0.27701]   # Pretrain dataset std
+            std=[0.2221, 0.27701],  # Pretrain dataset std
         )
 
         self.current_epoch = 0
@@ -95,23 +113,18 @@ class DataAugmentationiBot(object):
 
         self.patch_size = patch_size
         if use_swin:
-            print("Using Swin Transformer, patch size will be multiplied by 8.")
-            self.patch_size = patch_size * 8 # 3 downsamples of stride 2 -> (2**3)
-            print(f"Patch size for Swin Transformer: {self.patch_size}")
+            self.patch_size = patch_size * 8  # 3 downsamples of stride 2 -> (2**3)
 
-        print(f"MIM start epoch: {self.mim_start_epoch}")
+        flip_and_color_jitter = A.Compose(
+            [
+                A.HorizontalFlip(p=0.5),
+                ColorJitterFor2Channel(
+                    brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8
+                ),
+            ]
+        )
 
-        flip_and_color_jitter = A.Compose([
-            A.HorizontalFlip(p=0.5),
-            ColorJitterFor2Channel(brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8)
-        ])
-
-        old_normalize = A.Compose([
-            A.Normalize((0.485, 0.456), (0.229, 0.224)), # A.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-            ToTensorV2()
-        ])
-
-        old_augmentations1 = [            
+        old_augmentations1 = [
             flip_and_color_jitter,
             A.GaussianBlur(p=1.0),
         ]
@@ -156,40 +169,54 @@ class DataAugmentationiBot(object):
             ),
         ]
 
-        augmentations1 = old_augmentations1 if base_augmentations else new_augmentations1
-        augmentations2 = old_augmentations2 if base_augmentations else new_augmentations2
+        augmentations1 = (
+            old_augmentations1 if base_augmentations else new_augmentations1
+        )
+        augmentations2 = (
+            old_augmentations2 if base_augmentations else new_augmentations2
+        )
 
         if normalize:
-            print("Normalization is enabled. Adding normalization transform.")
             augmentations1.append(normalization)
             augmentations2.append(normalization)
 
         augmentations1 = A.Compose(augmentations1)
         augmentations2 = A.Compose(augmentations2)
 
-
         # first global crop
-        self.global_transfo1 = A.Compose([
-            A.RandomResizedCrop(224, 224, scale=global_crops_scale, interpolation=cv2.INTER_CUBIC),
-            ClipTo01(p=1.0),  # Clip to [0, 1] range
-            augmentations1
-        ])
+        self.global_transfo1 = A.Compose(
+            [
+                A.RandomResizedCrop(
+                    224, 224, scale=global_crops_scale, interpolation=cv2.INTER_CUBIC
+                ),
+                ClipTo01(p=1.0),  # Clip to [0, 1] range
+                augmentations1,
+            ]
+        )
         # second global crop
-        self.global_transfo2 = A.Compose([
-            A.RandomResizedCrop(224, 224, scale=global_crops_scale, interpolation=cv2.INTER_CUBIC),
-            ClipTo01(p=1.0),  # Clip to [0, 1] range
-            augmentations2
-        ])
+        self.global_transfo2 = A.Compose(
+            [
+                A.RandomResizedCrop(
+                    224, 224, scale=global_crops_scale, interpolation=cv2.INTER_CUBIC
+                ),
+                ClipTo01(p=1.0),  # Clip to [0, 1] range
+                augmentations2,
+            ]
+        )
         # transformation for the local small crops
         self.local_crops_number = local_crops_number
-        self.local_transfo = A.Compose([
-            A.RandomResizedCrop(96, 96, scale=local_crops_scale, interpolation=cv2.INTER_CUBIC),
-            ClipTo01(p=1.0),  # Clip to [0, 1] range
-            augmentations1
-        ])
+        self.local_transfo = A.Compose(
+            [
+                A.RandomResizedCrop(
+                    96, 96, scale=local_crops_scale, interpolation=cv2.INTER_CUBIC
+                ),
+                ClipTo01(p=1.0),  # Clip to [0, 1] range
+                augmentations1,
+            ]
+        )
 
     def input_mask_generator(self, img, patch_size=16, prediction_ratio=0.5):
-        """ Generate input masks for the iBot model.
+        """Generate input masks for the iBot model.
         This method generates masks for the input images based on the iBot masking strategy.
         It creates a mask for each image in the output, where the mask is a boolean array
         indicating which patches are masked (True) and which are not (False).
@@ -201,12 +228,12 @@ class DataAugmentationiBot(object):
             list: A list of boolean masks, where each mask has the same height and width as the corresponding image,
                   and indicates which patches are masked.
         """
-            
-        log_aspect_ratio = (math.log(0.3), math.log(1/0.3))  # Example values
+
+        log_aspect_ratio = (math.log(0.3), math.log(1 / 0.3))  # Example values
         H, W = img.shape[0] // patch_size, img.shape[1] // patch_size
 
         high = prediction_ratio * H * W
-        
+
         # following BEiT (https://arxiv.org/abs/2106.08254), see at
         # https://github.com/microsoft/unilm/blob/b94ec76c36f02fb2b0bf0dcb0b8554a2185173cd/beit/masking_generator.py#L55
         mask = np.zeros((H, W), dtype=bool)
@@ -216,7 +243,7 @@ class DataAugmentationiBot(object):
 
             delta = 0
             for attempt in range(10):
-                low = (min(H, W) // 3) ** 2 
+                low = (min(H, W) // 3) ** 2
                 target_area = random.uniform(low, max_mask_patches)
                 aspect_ratio = math.exp(random.uniform(*log_aspect_ratio))
                 h = int(round(math.sqrt(target_area * aspect_ratio)))
@@ -225,7 +252,7 @@ class DataAugmentationiBot(object):
                     top = random.randint(0, H - h)
                     left = random.randint(0, W - w)
 
-                    num_masked = mask[top: top + h, left: left + w].sum()
+                    num_masked = mask[top : top + h, left : left + w].sum()
                     if 0 < h * w - num_masked <= max_mask_patches:
                         for i in range(top, top + h):
                             for j in range(left, left + w):
@@ -240,7 +267,7 @@ class DataAugmentationiBot(object):
                 break
             else:
                 mask_count += delta
-        
+
         return mask.flatten()
 
     def __call__(self, image, mask, current_epoch):
@@ -253,16 +280,35 @@ class DataAugmentationiBot(object):
         masks = []
         for i in range(2):
             should_mask = random.random() < 0.5
-            if should_mask and current_epoch >= self.mim_start_epoch:  # Start masking after epoch 50
+            if (
+                should_mask and current_epoch >= self.mim_start_epoch
+            ):  # Start masking after epoch 50
                 prediction_ratio = random.uniform(0.1, 0.5)
-                masks.append(self.input_mask_generator(crops[i], patch_size=self.patch_size, prediction_ratio=prediction_ratio))
+                masks.append(
+                    self.input_mask_generator(
+                        crops[i],
+                        patch_size=self.patch_size,
+                        prediction_ratio=prediction_ratio,
+                    )
+                )
             else:
                 prediction_ratio = 0.0
-                masks.append(self.input_mask_generator(crops[i], patch_size=self.patch_size, prediction_ratio=prediction_ratio))
+                masks.append(
+                    self.input_mask_generator(
+                        crops[i],
+                        patch_size=self.patch_size,
+                        prediction_ratio=prediction_ratio,
+                    )
+                )
 
         for i in range(2, len(crops)):
-            masks.append(self.input_mask_generator(crops[i], patch_size=self.patch_size, prediction_ratio=0))
+            masks.append(
+                self.input_mask_generator(
+                    crops[i], patch_size=self.patch_size, prediction_ratio=0
+                )
+            )
         return {"image": crops, "mask": masks}
+
 
 class PretrainDataModuleiBot(pl.LightningDataModule):
     def __init__(
@@ -281,7 +327,7 @@ class PretrainDataModuleiBot(pl.LightningDataModule):
         use_swin: Optional[bool] = False,
         mim_start_epoch: Optional[int] = 0,
         base_augmentations: Optional[bool] = False,
-        normalize: Optional[bool] = False
+        normalize: Optional[bool] = False,
     ):
         """The Data Module specific to AOI data using 2 lighting conditions
 
@@ -308,7 +354,7 @@ class PretrainDataModuleiBot(pl.LightningDataModule):
             use_swin=use_swin,
             mim_start_epoch=mim_start_epoch,
             base_augmentations=base_augmentations,
-            normalize=normalize
+            normalize=normalize,
         )
         self.data_path = data_path
         self.batch_size = batch_size
@@ -357,7 +403,7 @@ class PretrainDataModuleiBot(pl.LightningDataModule):
                 with evaluation pad and center crop transforms.
         """
 
-        #Note: stage not implemented yet
+        # Note: stage not implemented yet
         self.stage = stage
 
         # Only center cropped if a input resolution is specified.
@@ -387,13 +433,10 @@ class PretrainDataModuleiBot(pl.LightningDataModule):
         self.aoi_test = PretrainDatasetiBot(
             Path(self.data_path) / "test",
             transform=self.eval_transform,
-            return_filename=self.return_filename
+            return_filename=self.return_filename,
         )
 
     def train_dataloader(self) -> DataLoader:
-
-        #sampler = DistributedSampler(self.aoi_train, shuffle=True, seed=self.seed) if self.trainer and self.trainer.strategy in ["ddp", "ddp_spawn"] else None
-        #print(f"Sampler: {sampler}")
 
         return DataLoader(
             self.aoi_train,
@@ -406,9 +449,7 @@ class PretrainDataModuleiBot(pl.LightningDataModule):
     def val_dataloader(self) -> DataLoader:
 
         return DataLoader(
-            self.aoi_val,
-            num_workers=self.num_workers,
-            batch_size=self.test_batch_size
+            self.aoi_val, num_workers=self.num_workers, batch_size=self.test_batch_size
         )
 
     def test_dataloader(self) -> DataLoader:

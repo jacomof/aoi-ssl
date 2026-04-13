@@ -25,6 +25,14 @@ The original project was developed with a private industrial dataset. To protect
 
 No proprietary data is included in this repository.
 
+## Licensing And Third-Party Notices
+
+This repository is distributed under Apache-2.0, with the exception of specific third-party files that keep their original upstream license terms.
+
+In particular, parts of `segmentation/models/faster_vit` are derived from NVIDIA FasterViT code and include NVIDIA copyright and license headers. Those files are not relicensed by this repository and remain subject to their original terms, including non-commercial and other use restrictions.
+
+See `THIRD_PARTY_NOTICES` for a file-by-file provenance and licensing summary.
+
 ## Repository Structure
 
 - [configs](configs): pretraining and fine-tuning YAML configurations

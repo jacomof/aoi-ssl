@@ -1,3 +1,7 @@
+# Experiment Tracking
+# MLFlow Experiment name
+name: aoi-finetune-vit-ibot
+
 # Training pipeline
 epochs: 100
 batch_size: 8
@@ -7,15 +11,12 @@ gradient_clip_val: 5.0
 precision: "16-mixed"
 accumulate_grad_batches: 1
 
-input_resolution: [512, 512]
+input_resolution: [512, 512] # must match img_size in model_params
 
 # Model parameters
 model_params:
-  mesa_lmbda: 3.0
-  mesa_finetune: False
-  num_classes: 2
+  num_classes: 2 # change with the number of classes in your dataset
 
-  ## Ignore this part, without scheduler 
   warmup_steps: 5 # For MAE, Warm-up epochs
   min_lr: 5.0e-7
   weight_decay: 5.0e-2
@@ -25,7 +26,7 @@ model_params:
   use_decay_lr: True
 
   ##
-  img_size: 512
+  img_size: 512 # input image size for fixed resolution models
 
   # Vit-B settings
   patch_size: 16

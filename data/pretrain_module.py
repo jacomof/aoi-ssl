@@ -85,7 +85,7 @@ class PretrainDataModule(pl.LightningDataModule):
                 with evaluation pad and center crop transforms.
         """
 
-        #Note: stage not implemented yet
+        # Note: stage not implemented yet
         self.stage = stage
 
         # Only center cropped if a input resolution is specified.
@@ -94,7 +94,6 @@ class PretrainDataModule(pl.LightningDataModule):
 
         # Option to uniformly sample over the different customer subsets
         self.train_sampler = None
-        print("data_path in pretrain_module is: ", self.data_path)
         if "sample_weights.npy" in os.listdir(self.data_path):
             sample_weights = np.load(Path(self.data_path) / "sample_weights.npy")
             self.train_sampler = WeightedRandomSampler(
@@ -129,11 +128,11 @@ class PretrainDataModule(pl.LightningDataModule):
             transform=self.eval_transform,
             return_filename=self.return_filename,
         )
-        
+
         self.aoi_test = PretrainDataset(
             test_root,
             transform=self.eval_transform,
-            return_filename=self.return_filename
+            return_filename=self.return_filename,
         )
 
     def train_dataloader(self) -> DataLoader:

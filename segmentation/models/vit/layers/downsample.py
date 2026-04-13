@@ -12,8 +12,6 @@ def make_image(x: torch.Tensor, patch_grid_size: tuple[int, int]):
     Returns:
         Image tensor.
     """
-    print(f"Make image input shape: {x.shape}")
-    print(f"Patch grid size: {patch_grid_size}")
     H = patch_grid_size[0]
     W = patch_grid_size[1]
     C = x.shape[2]
@@ -21,6 +19,7 @@ def make_image(x: torch.Tensor, patch_grid_size: tuple[int, int]):
     # input shape: (B, N, C) -> output shape: (B, C, H, W), where N = H * W
     x = x.view(x.shape[0], H, W, C).permute(0, 3, 1, 2)
     return x
+
 
 def make_tokens(x: torch.Tensor):
     """
@@ -37,6 +36,7 @@ def make_tokens(x: torch.Tensor):
     x = x.permute(0, 2, 3, 1).reshape(B, N, C)
     return x
 
+
 def make_2tuple(x):
     """
     Make a 2-tuple from an integer or a tuple.
@@ -51,6 +51,7 @@ def make_2tuple(x):
 
     assert isinstance(x, int)
     return (x, x)
+
 
 class Downsample(nn.Module):
     """
@@ -85,9 +86,8 @@ class Downsample(nn.Module):
         self.cls_projection = nn.Linear(dim, dim_out)
 
     def forward(self, x: torch.Tensor):
-        print(f"Downsample input shape: {x.shape}")
         patch_tokens = x[:, 1:, :]  # Extract patch tokens
-        cls_token = x[:, 0, :]      # Extract cls token
+        cls_token = x[:, 0, :]  # Extract cls token
 
         # Project the cls token to the new dimension
         cls_token = self.cls_projection(cls_token)
@@ -95,7 +95,6 @@ class Downsample(nn.Module):
         patch_tokens = make_image(patch_tokens, self.patch_grid_size)
         patch_tokens = self.norm(patch_tokens)
         patch_tokens = self.reduction(patch_tokens)
-        print(f"Downsample output shape: {patch_tokens.shape}")
         patch_tokens = make_tokens(patch_tokens)
 
         # Concatenate the cls token back with the patch tokens

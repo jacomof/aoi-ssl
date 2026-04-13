@@ -19,14 +19,10 @@ from segmentation.models.upernet_decoder import UperNetDecoder
 
 def window_partition(x, window_size):
     B, C, H, W = x.shape
-    x = x.view(
-        B, C, H // window_size, window_size, W // window_size, window_size
-    )
+    x = x.view(B, C, H // window_size, window_size, W // window_size, window_size)
     # After permute out -> B, H//window_size, W//window_size, window_size, window_size, C
     # Then reshape to -> B * (H//window_size) * (W//window_size), window_size * window_size, C
-    windows = x.permute(0, 2, 4, 3, 5, 1).reshape(
-        -1, window_size * window_size, C
-    )
+    windows = x.permute(0, 2, 4, 3, 5, 1).reshape(-1, window_size * window_size, C)
     return windows
 
 
@@ -51,9 +47,7 @@ def ct_dewindow(ct, W, H, window_size):
 def ct_window(ct, W, H, window_size):
     bs = ct.shape[0]
     N = ct.shape[2]
-    ct = ct.view(
-        bs, H // window_size, window_size, W // window_size, window_size, N
-    )
+    ct = ct.view(bs, H // window_size, window_size, W // window_size, window_size, N)
     ct = ct.permute(0, 1, 3, 2, 4, 5)
     return ct
 
@@ -84,9 +78,7 @@ def _load_state_dict(module, state_dict, strict=False, logger=None):
         state_dict._metadata = metadata
 
     def load(module, prefix=""):
-        local_metadata = (
-            {} if metadata is None else metadata.get(prefix[:-1], {})
-        )
+        local_metadata = {} if metadata is None else metadata.get(prefix[:-1], {})
         module._load_from_state_dict(
             state_dict,
             prefix,
@@ -102,14 +94,11 @@ def _load_state_dict(module, state_dict, strict=False, logger=None):
 
     load(module)
     load = None
-    missing_keys = [
-        key for key in all_missing_keys if "num_batches_tracked" not in key
-    ]
+    missing_keys = [key for key in all_missing_keys if "num_batches_tracked" not in key]
 
     if unexpected_keys:
         err_msg.append(
-            "unexpected key in source "
-            f'state_dict: {", ".join(unexpected_keys)}\n'
+            "unexpected key in source " f'state_dict: {", ".join(unexpected_keys)}\n'
         )
     if missing_keys:
         err_msg.append(
@@ -117,9 +106,7 @@ def _load_state_dict(module, state_dict, strict=False, logger=None):
         )
 
     if len(err_msg) > 0:
-        err_msg.insert(
-            0, "The model and loaded state dict do not match exactly\n"
-        )
+        err_msg.insert(0, "The model and loaded state dict do not match exactly\n")
         err_msg = "\n".join(err_msg)
         if strict:
             raise RuntimeError(err_msg)
@@ -129,9 +116,7 @@ def _load_state_dict(module, state_dict, strict=False, logger=None):
             print(err_msg)
 
 
-def _load_checkpoint(
-    model, filename, map_location="cpu", strict=False, logger=None
-):
+def _load_checkpoint(model, filename, map_location="cpu", strict=False, logger=None):
     """Load checkpoint from a file or URI.
 
     Args:
@@ -275,9 +260,7 @@ class PosEmbMLPSwinv2D(nn.Module):
                         indices.append(int(ind))
 
                 top_part = relative_position_bias[:, indices, :]
-                lefttop_part = relative_position_bias[:, indices, :][
-                    :, :, indices
-                ]
+                lefttop_part = relative_position_bias[:, indices, :][:, :, indices]
                 left_part = relative_position_bias[:, :, indices]
             relative_position_bias = torch.nn.functional.pad(
                 relative_position_bias,
@@ -285,15 +268,15 @@ class PosEmbMLPSwinv2D(nn.Module):
             ).contiguous()
             if n_global_feature > 0 and self.ct_correct:
                 relative_position_bias = relative_position_bias * 0.0
-                relative_position_bias[
-                    :, :n_global_feature, :n_global_feature
-                ] = lefttop_part
-                relative_position_bias[
-                    :, :n_global_feature, n_global_feature:
-                ] = top_part
-                relative_position_bias[
-                    :, n_global_feature:, :n_global_feature
-                ] = left_part
+                relative_position_bias[:, :n_global_feature, :n_global_feature] = (
+                    lefttop_part
+                )
+                relative_position_bias[:, :n_global_feature, n_global_feature:] = (
+                    top_part
+                )
+                relative_position_bias[:, n_global_feature:, :n_global_feature] = (
+                    left_part
+                )
 
             self.pos_emb = relative_position_bias.unsqueeze(0)
             self.relative_bias = self.pos_emb
@@ -329,9 +312,7 @@ class PosEmbMLPSwinv1D(nn.Module):
         self.deploy = True
 
     def forward(self, input_tensor):
-        seq_length = (
-            input_tensor.shape[1] if not self.conv else input_tensor.shape[2]
-        )
+        seq_length = input_tensor.shape[1] if not self.conv else input_tensor.shape[2]
         if self.deploy:
             return input_tensor + self.relative_bias
         else:
@@ -367,9 +348,7 @@ class PosEmbMLPSwinv1D(nn.Module):
                     dtype=input_tensor.dtype,
                 )
                 relative_coords_table = (
-                    torch.stack(
-                        torch.meshgrid([relative_coords_h, relative_coords_w])
-                    )
+                    torch.stack(torch.meshgrid([relative_coords_h, relative_coords_w]))
                     .contiguous()
                     .unsqueeze(0)
                 )
@@ -477,10 +456,12 @@ class PatchEmbed(nn.Module):
         super().__init__()
         self.proj = nn.Identity()
         self.conv_down = nn.Sequential(
-            nn.Conv2d(in_chans, in_dim, 3, 2, 1, bias=False), # in_dim is C_in the paper
+            nn.Conv2d(
+                in_chans, in_dim, 3, 2, 1, bias=False
+            ),  # in_dim is C_in the paper
             nn.BatchNorm2d(in_dim, eps=1e-4),
             nn.ReLU(),
-            nn.Conv2d(in_dim, dim, 3, 2, 1, bias=False), # Dim is C in the paper
+            nn.Conv2d(in_dim, dim, 3, 2, 1, bias=False),  # Dim is C in the paper
             nn.BatchNorm2d(dim, eps=1e-4),
             nn.ReLU(),
         )
@@ -505,14 +486,10 @@ class ConvBlock(nn.Module):
             layer_scale: layer scale coefficient.
             kernel_size: kernel size.
         """
-        self.conv1 = nn.Conv2d(
-            dim, dim, kernel_size=kernel_size, stride=1, padding=1
-        )
+        self.conv1 = nn.Conv2d(dim, dim, kernel_size=kernel_size, stride=1, padding=1)
         self.norm1 = nn.BatchNorm2d(dim, eps=1e-5)
         self.act1 = nn.GELU()
-        self.conv2 = nn.Conv2d(
-            dim, dim, kernel_size=kernel_size, stride=1, padding=1
-        )
+        self.conv2 = nn.Conv2d(dim, dim, kernel_size=kernel_size, stride=1, padding=1)
         self.norm2 = nn.BatchNorm2d(dim, eps=1e-5)
         self.layer_scale = layer_scale
         if layer_scale is not None and type(layer_scale) in [int, float]:
@@ -520,9 +497,7 @@ class ConvBlock(nn.Module):
             self.layer_scale = True
         else:
             self.layer_scale = False
-        self.drop_path = (
-            DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
-        )
+        self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
 
     def forward(self, x, global_feature=None):
         input = x
@@ -652,9 +627,7 @@ class HAT(nn.Module):
         self.norm1 = norm_layer(dim)
         self.square = True if sr_ratio[0] == sr_ratio[1] else False
         # number of carrier tokens per every window
-        self.do_sr_hat = (
-            True if ((sr_ratio[0] > 1) or (sr_ratio[1] > 1)) else False
-        )
+        self.do_sr_hat = True if ((sr_ratio[0] > 1) or (sr_ratio[1] > 1)) else False
         cr_tokens_per_window = ct_size**2 if self.do_sr_hat else 0
 
         # total number of carrier tokens
@@ -672,9 +645,7 @@ class HAT(nn.Module):
             seq_length=window_size**2 + cr_tokens_per_window,
         )
 
-        self.drop_path = (
-            DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
-        )
+        self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
         self.norm2 = norm_layer(dim)
         mlp_hidden_dim = int(dim * mlp_ratio)
         self.mlp = Mlp(
@@ -726,14 +697,10 @@ class HAT(nn.Module):
                     dim, rank=2, seq_length=cr_tokens_total
                 )
             self.gamma1 = (
-                nn.Parameter(layer_scale * torch.ones(dim))
-                if use_layer_scale
-                else 1
+                nn.Parameter(layer_scale * torch.ones(dim)) if use_layer_scale else 1
             )
             self.gamma2 = (
-                nn.Parameter(layer_scale * torch.ones(dim))
-                if use_layer_scale
-                else 1
+                nn.Parameter(layer_scale * torch.ones(dim)) if use_layer_scale else 1
             )
             self.upsampler = nn.Upsample(size=window_size, mode="nearest")
 
@@ -766,9 +733,7 @@ class HAT(nn.Module):
             ct = ct + self.hat_drop_path(
                 self.gamma1 * self.hat_attn(self.hat_norm1(ct))
             )
-            ct = ct + self.hat_drop_path(
-                self.gamma2 * self.hat_mlp(self.hat_norm2(ct))
-            )
+            ct = ct + self.hat_drop_path(self.gamma2 * self.hat_mlp(self.hat_norm2(ct)))
 
             # ct are put back to windows
             ct = ct_window(
@@ -927,9 +892,7 @@ class FasterViTLayer(nn.Module):
                     ConvBlock(
                         dim=dim,
                         drop_path=(
-                            drop_path[i]
-                            if isinstance(drop_path, list)
-                            else drop_path
+                            drop_path[i] if isinstance(drop_path, list) else drop_path
                         ),
                         layer_scale=layer_scale_conv,
                     )
@@ -953,9 +916,7 @@ class FasterViTLayer(nn.Module):
                         drop=drop,
                         attn_drop=attn_drop,
                         drop_path=(
-                            drop_path[i]
-                            if isinstance(drop_path, list)
-                            else drop_path
+                            drop_path[i] if isinstance(drop_path, list) else drop_path
                         ),
                         sr_ratio=sr_ratio,
                         window_size=window_size,
@@ -997,11 +958,15 @@ class FasterViTLayer(nn.Module):
                 Hp, Wp = H, W
         ct = self.global_tokenizer(x) if self.do_gt else None
         if self.transformer_block:
-            x = window_partition(x, self.window_size) # Output shape: B, N, C - C is the embedding dimension of the local view tokens
+            x = window_partition(
+                x, self.window_size
+            )  # Output shape: B, N, C - C is the embedding dimension of the local view tokens
         for bn, blk in enumerate(self.blocks):
-            x, ct = blk(x, ct) # In this operation the outputs are token embeddings
+            x, ct = blk(x, ct)  # In this operation the outputs are token embeddings
         if self.transformer_block:
-            x = window_reverse(x, self.window_size, Hp, Wp, B) # Input shape still: B, N, C | Output shape: B, C, H, W
+            x = window_reverse(
+                x, self.window_size, Hp, Wp, B
+            )  # Input shape still: B, N, C | Output shape: B, C, H, W
             if pad_r > 0 or pad_b > 0:
                 x = x[:, :, :H, :W].contiguous()
         if self.downsample is None:
@@ -1063,7 +1028,7 @@ class FasterViT(nn.Module):
             do_propagation: enable carrier token propagation.
         """
         super().__init__()
-        if type(resolution) != tuple and type(resolution) != list:
+        if not isinstance(resolution, (tuple, list)):
             resolution = [resolution, resolution]
         num_features = int(dim * 2 ** (len(depths) - 1))
         self.num_classes = num_classes
@@ -1107,9 +1072,7 @@ class FasterViT(nn.Module):
         )
         self.avgpool = nn.AdaptiveAvgPool2d(1)
         self.head = (
-            nn.Linear(num_features, num_classes)
-            if num_classes > 0
-            else nn.Identity()
+            nn.Linear(num_features, num_classes) if num_classes > 0 else nn.Identity()
         )
         self.apply(self._init_weights)
 
@@ -1158,19 +1121,13 @@ class ConvSegHead(nn.Module):
     def __init__(self, in_channels, inner_channels, num_classes, scale_factor=2):
         super().__init__()
         self.bn1 = nn.BatchNorm2d(in_channels)
-        self.conv1 = nn.Conv2d(
-            in_channels, inner_channels, 3, padding=1, bias=False
-        )
+        self.conv1 = nn.Conv2d(in_channels, inner_channels, 3, padding=1, bias=False)
 
         self.bn2 = nn.BatchNorm2d(inner_channels)
-        self.conv2 = nn.Conv2d(
-            inner_channels, inner_channels, 3, padding=1, bias=False
-        )
+        self.conv2 = nn.Conv2d(inner_channels, inner_channels, 3, padding=1, bias=False)
 
         self.bn3 = nn.BatchNorm2d(inner_channels)
-        self.conv3 = nn.Conv2d(
-            inner_channels, inner_channels, 3, padding=1, bias=False
-        )
+        self.conv3 = nn.Conv2d(inner_channels, inner_channels, 3, padding=1, bias=False)
 
         self.bn4 = nn.BatchNorm2d(inner_channels)
         self.conv4 = nn.Conv2d(inner_channels, num_classes, 1, bias=False)
@@ -1250,7 +1207,7 @@ class SegFasterViT(nn.Module):
             do_propagation: enable carrier token propagation.
         """
         super().__init__()
-        if type(resolution) != tuple and type(resolution) != list:
+        if not isinstance(resolution, (tuple, list)):
             resolution = [resolution, resolution]
         num_features = int(dim * 2 ** (len(depths) - 1))
         self.num_classes = num_classes

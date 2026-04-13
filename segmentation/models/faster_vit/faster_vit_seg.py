@@ -2,11 +2,11 @@ import math
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from segmentation.models.lora import LoRA
 from segmentation.models.upernet_decoder import UperNetDecoder
 from segmentation.models.faster_vit.faster_vit_any_res import FasterViT
+
 
 class FasterVitSeg(nn.Module):
     def __init__(
@@ -22,7 +22,7 @@ class FasterVitSeg(nn.Module):
         freeze_encoder: bool = False,
         alpha: float = 16.0,
         n_layers: int = 4,
-        **kwargs
+        **kwargs,
     ):
         """
         Args:
@@ -58,20 +58,14 @@ class FasterVitSeg(nn.Module):
         # Feature shape: torch.Size([64, 512, 16, 16])
 
         self.encoder = self.set_encoder(
-            encoder,
-            freeze_encoder=freeze_encoder,
-            **kwargs
+            encoder, freeze_encoder=freeze_encoder, **kwargs
         )
         encoder_dim = self.encoder.dim
 
-        
-
-        multi_list = [2 ** (i+1) for i in range(len(self.encoder.levels))]
-        multi_list[-1] = multi_list[-2] # Last one is the same as the second last
+        multi_list = [2 ** (i + 1) for i in range(len(self.encoder.levels))]
+        multi_list[-1] = multi_list[-2]  # Last one is the same as the second last
         fpn_inplanes = [encoder_dim * m for m in multi_list]
         pool_scales = (2, 4, 8, 16)
-        
-
 
         self.decoder = UperNetDecoder(
             embed_dim=self.encoder.embed_dim,
@@ -81,13 +75,8 @@ class FasterVitSeg(nn.Module):
             pool_scales=pool_scales,
         )
 
-
-
     def set_encoder(
-        self,
-        encoder: FasterViT,
-        freeze_encoder: bool = False,
-        **kwargs
+        self, encoder: FasterViT, freeze_encoder: bool = False, **kwargs
     ) -> FasterViT:
 
         # ============= Set the Encoder ==============
@@ -100,14 +89,13 @@ class FasterVitSeg(nn.Module):
             # If not using LoRA, we can still freeze the encoder
             for param in encoder.parameters():
                 param.requires_grad = False
-        
+
         return encoder
 
     def _create_lora_layer(self, dim: int, r: int):
         w_a = nn.Linear(dim, r, bias=False)
         w_b = nn.Linear(r, dim, bias=False)
         return w_a, w_b
-    
 
     def _reset_lora_parameters(self) -> None:
         for w_a in self.w_a:
@@ -122,51 +110,50 @@ class FasterVitSeg(nn.Module):
         for f in feature:
             print(f"Feature shape: {f.shape}")
         # Decoder combines multiple layers of the encoder. Each layer's output is the patch tokens
-        logits = self.decoder(feature) # [Layer1, Layer2, Layer3, Layer4]
+        logits = self.decoder(feature)  # [Layer1, Layer2, Layer3, Layer4]
         # Shape of logits is (batch_size, num_classes, height, width)
         embeds = None
 
         return logits, embeds
 
-    def setup_lora(self, encoder:FasterViT):
-            print("Using LoRA with rank:", self.r)
-            self.lora_layers = list(range(len(encoder.blocks)))
-            self.w_a = []
-            self.w_b = []
+    def setup_lora(self, encoder: FasterViT):
+        self.lora_layers = list(range(len(encoder.blocks)))
+        self.w_a = []
+        self.w_b = []
 
-            # Freeze ALL encoder parameters first
-            for param in encoder.parameters():
-                param.requires_grad = False
-            
-            # Unfreeze patch embedding for input adaptation
-            if hasattr(encoder, 'patch_embed'):
-                for param in encoder.patch_embed.parameters():
-                    param.requires_grad = True
-        
-            # Unfreeze layer norm parameters (often helpful)
-            for name, param in encoder.named_parameters():
-                if 'norm' in name or 'ln' in name:
-                    param.requires_grad = True
+        # Freeze ALL encoder parameters first
+        for param in encoder.parameters():
+            param.requires_grad = False
 
-            for i, block in enumerate(encoder.blocks):
-                if i not in self.lora_layers:
-                    continue
-                w_qkv_linear = block.attn.qkv
-                dim = w_qkv_linear.in_features
+        # Unfreeze patch embedding for input adaptation
+        if hasattr(encoder, "patch_embed"):
+            for param in encoder.patch_embed.parameters():
+                param.requires_grad = True
 
-                w_a_linear_q, w_b_linear_q = self._create_lora_layer(dim, self.r)
-                w_a_linear_v, w_b_linear_v = self._create_lora_layer(dim, self.r)
+        # Unfreeze layer norm parameters (often helpful)
+        for name, param in encoder.named_parameters():
+            if "norm" in name or "ln" in name:
+                param.requires_grad = True
 
-                self.w_a.extend([w_a_linear_q, w_a_linear_v])
-                self.w_b.extend([w_b_linear_q, w_b_linear_v])
+        for i, block in enumerate(encoder.blocks):
+            if i not in self.lora_layers:
+                continue
+            w_qkv_linear = block.attn.qkv
+            dim = w_qkv_linear.in_features
 
-                block.attn.qkv = LoRA(
-                    w_qkv_linear,
-                    w_a_linear_q,
-                    w_b_linear_q,
-                    w_a_linear_v,
-                    w_b_linear_v,
-                    alpha=self.alpha,
-                )
-            self._reset_lora_parameters()
-            return encoder
+            w_a_linear_q, w_b_linear_q = self._create_lora_layer(dim, self.r)
+            w_a_linear_v, w_b_linear_v = self._create_lora_layer(dim, self.r)
+
+            self.w_a.extend([w_a_linear_q, w_a_linear_v])
+            self.w_b.extend([w_b_linear_q, w_b_linear_v])
+
+            block.attn.qkv = LoRA(
+                w_qkv_linear,
+                w_a_linear_q,
+                w_b_linear_q,
+                w_a_linear_v,
+                w_b_linear_v,
+                alpha=self.alpha,
+            )
+        self._reset_lora_parameters()
+        return encoder

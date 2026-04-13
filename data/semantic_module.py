@@ -59,7 +59,6 @@ class SemanticDataModule(pl.LightningDataModule):
         # If networks can't handle variable input resolutions
         self.input_resolution = input_resolution
 
-
         self.prob_channel_dropout = prob_channel_dropout
         self.prob_channel_swap = prob_channel_swap
 
@@ -184,9 +183,7 @@ class SemanticDataModule(pl.LightningDataModule):
                 self.classes,
                 transform=self.eval_transform,
                 return_filename=self.return_filename,
-                tile_overlap=(
-                    self.tile_overlap if self.stage == "tiling" else None
-                ),
+                tile_overlap=(self.tile_overlap if self.stage == "tiling" else None),
             ),
             num_workers=self.num_workers,
             batch_size=self.batch_size,

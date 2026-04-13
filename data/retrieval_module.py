@@ -11,7 +11,6 @@ from torch.utils.data import DataLoader
 from data.retrieval_dataset import RetrievalDataset
 from data.image_tiling import slice_image_to_tiles
 
-
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
 
 
@@ -73,7 +72,6 @@ class RetrievalDataModule(pl.LightningDataModule):
                 input resolution. Defaults to None.
         """
 
-        print("Initializing RetrievalDataModule...")
         super().__init__()
         self.save_hyperparameters()
 
@@ -101,8 +99,6 @@ class RetrievalDataModule(pl.LightningDataModule):
         # Set random seed for reproducibility
         np.random.seed(self.random_seed)
 
-        print("Augmented is true!")
-
         # Channel 0 mean: 0.17811504349642812, std: 0.22236312176409964
         # Channel 1 mean: 0.23459850405723615, std: 0.270697137739698
         self.normalization = A.Normalize(
@@ -110,13 +106,14 @@ class RetrievalDataModule(pl.LightningDataModule):
             std=[0.22236, 0.27070],
         )
 
-
         train_split_img = self.data_path / "train" / "img"
         val_split_img = self.data_path / "val" / "img"
         test_split_img = self.data_path / "test" / "img"
 
         use_explicit_splits = (
-            train_split_img.exists() and val_split_img.exists() and test_split_img.exists()
+            train_split_img.exists()
+            and val_split_img.exists()
+            and test_split_img.exists()
         )
 
         if use_explicit_splits:
@@ -124,24 +121,21 @@ class RetrievalDataModule(pl.LightningDataModule):
             # data_path/train/{img,lbl}, data_path/val/{img,lbl}, data_path/test/{img,lbl}
             self.train_img_list = _list_images_from_split_root(self.data_path / "train")
             self.val_img_list = _list_images_from_split_root(self.data_path / "val")
-            self.holdout_img_list = _list_images_from_split_root(self.data_path / "test")
-            print(
-                "Using explicit splits from train/val/test directories: "
-                f"train={len(self.train_img_list)}, "
-                f"val={len(self.val_img_list)}, "
-                f"test={len(self.holdout_img_list)}"
+            self.holdout_img_list = _list_images_from_split_root(
+                self.data_path / "test"
             )
+
         else:
             # Legacy fallback: train/val random split from a single image directory
             # and holdout from a separate directory.
             img_list = _list_split_images(self.data_path / self.img_dir)
-            self.holdout_img_list = _list_split_images(self.data_path / self.holdout_dir)
+            self.holdout_img_list = _list_split_images(
+                self.data_path / self.holdout_dir
+            )
 
-            print(self.train_size)
-            print(len(img_list))
             np.random.shuffle(img_list)
             self.train_img_list = img_list[: int(len(img_list) * self.train_size)]
-            self.val_img_list = img_list[int(len(img_list) * self.train_size):]
+            self.val_img_list = img_list[int(len(img_list) * self.train_size) :]
 
         if self.input_resolution:
             self.eval_transform = A.Compose(
@@ -166,38 +160,37 @@ class RetrievalDataModule(pl.LightningDataModule):
 
         if transform:
             # If the transform is provided, it will be used for training
-            print("Using provided transform for training.")
             self.transform = transform
 
         elif augmented:
             self.transform = A.Compose(
-            [
-                A.PadIfNeeded(
-                    min_height=self.input_resolution[0],
-                    min_width=self.input_resolution[1],
-                    # Avoids reflective padding
-                    border_mode=cv2.BORDER_CONSTANT,
-                    value=(0, 0, 0),
-                    p=1,
-                ),
-                A.SomeOf(
-                    [
-                        A.VerticalFlip(p=0.5),
-                        A.HorizontalFlip(p=0.5),
-                        A.GaussianBlur(sigma_limit=0.75),
-                        A.RandomContrast(),
-                        A.GaussNoise(var_limit=(0.05, 0.05 * 255)),
-                        A.RandomRotate90(),
-                        A.Affine(scale=(0.5, 2.0)),
-                        A.Affine(rotate=(-45, 45)),
-                        A.Affine(shear=(-8, 8)),
-                        A.RandomGamma(gamma_limit=(80, 120), p=0.5),
-                    ],
-                    3,
-                ),
-                A.RandomCrop(self.input_resolution[0], self.input_resolution[1]),
-            ]
-        )
+                [
+                    A.PadIfNeeded(
+                        min_height=self.input_resolution[0],
+                        min_width=self.input_resolution[1],
+                        # Avoids reflective padding
+                        border_mode=cv2.BORDER_CONSTANT,
+                        value=(0, 0, 0),
+                        p=1,
+                    ),
+                    A.SomeOf(
+                        [
+                            A.VerticalFlip(p=0.5),
+                            A.HorizontalFlip(p=0.5),
+                            A.GaussianBlur(sigma_limit=0.75),
+                            A.RandomContrast(),
+                            A.GaussNoise(var_limit=(0.05, 0.05 * 255)),
+                            A.RandomRotate90(),
+                            A.Affine(scale=(0.5, 2.0)),
+                            A.Affine(rotate=(-45, 45)),
+                            A.Affine(shear=(-8, 8)),
+                            A.RandomGamma(gamma_limit=(80, 120), p=0.5),
+                        ],
+                        3,
+                    ),
+                    A.RandomCrop(self.input_resolution[0], self.input_resolution[1]),
+                ]
+            )
         else:
             self.transform = A.Compose(
                 [
@@ -215,7 +208,7 @@ class RetrievalDataModule(pl.LightningDataModule):
                     ),
                 ]
             )
-        
+
         if self.normalize:
             self.transform = A.Compose(
                 [
@@ -230,8 +223,6 @@ class RetrievalDataModule(pl.LightningDataModule):
                     self.normalization,
                 ]
             )
-
-
 
     def setup(self, stage: str):
         """Generate the type of the dataloaders depending on the stage.

@@ -6,7 +6,6 @@ from segmentation.models.faster_vit.faster_vit_any_res import faster_vit_0_ssl_a
 from segmentation.models.vit.layers import NestedTensorBlock as Block
 
 
-
 class MaskedAutoencoderFasterVit(nn.Module):
     def __init__(self, **parameters):
         super().__init__()
@@ -24,7 +23,7 @@ class MaskedAutoencoderFasterVit(nn.Module):
             self.decoder = MaskedDecoder(
                 num_patches=num_patches,
                 embed_dim=self.encoder.embed_dim,
-                patch_size=32, # Effective fixed patch size for the last level of FasterViT
+                patch_size=32,  # Effective fixed patch size for the last level of FasterViT
                 in_chans=parameters["in_chans"],
                 depth=2,  # Taken of MAE paper
             )
@@ -48,9 +47,7 @@ class MaskedAutoencoderFasterVit(nn.Module):
 
         # keep the first subset
         ids_keep = ids_shuffle[:, :len_keep]
-        x_masked = torch.gather(
-            x, dim=1, index=ids_keep.unsqueeze(-1).repeat(1, 1, D)
-        )
+        x_masked = torch.gather(x, dim=1, index=ids_keep.unsqueeze(-1).repeat(1, 1, D))
 
         # generate the binary mask: 0 is keep, 1 is remove
         mask = torch.ones([N, L], device=x.device)
@@ -108,9 +105,7 @@ class MaskedAutoencoderFasterVit(nn.Module):
             loss = (y_hat - y) ** 2
             loss = loss.mean(dim=-1)  # [N, L], mean loss per patch
 
-            loss = (
-                loss * masks
-            ).sum() / masks.sum()  # mean loss on removed patches
+            loss = (loss * masks).sum() / masks.sum()  # mean loss on removed patches
         return loss, y_hat, masks, x_patches
 
 
@@ -134,7 +129,9 @@ class MaskedDecoder(nn.Module):
         self.num_patches = num_patches
         self.embed_dim = embed_dim
 
-        self.mask_token = nn.Parameter(torch.zeros(1, 1, decoder_embed)) # Try to use the same mask token for encoder and decoder
+        self.mask_token = nn.Parameter(
+            torch.zeros(1, 1, decoder_embed)
+        )  # Try to use the same mask token for encoder and decoder
         self.decoder_embed = nn.Linear(self.embed_dim, decoder_embed, bias=True)
         self.pos_embed = nn.Parameter(
             torch.zeros(1, num_patches + 1, decoder_embed), requires_grad=False
@@ -165,9 +162,7 @@ class MaskedDecoder(nn.Module):
         pos_embed = get_2d_sincos_pos_embed(
             self.pos_embed.shape[-1], int(self.num_patches**0.5), cls_token=True
         )
-        self.pos_embed.data.copy_(
-            torch.from_numpy(pos_embed).float().unsqueeze(0)
-        )
+        self.pos_embed.data.copy_(torch.from_numpy(pos_embed).float().unsqueeze(0))
 
         # timm's trunc_normal_(std=.02) is effectively normal_(std=0.02) as cutoff is too big (2.)
         torch.nn.init.normal_(self.mask_token, std=0.02)
@@ -220,12 +215,8 @@ def get_2d_sincos_pos_embed_from_grid(embed_dim, grid):
     assert embed_dim % 2 == 0
 
     # use half of dimensions to encode grid_h
-    emb_h = get_1d_sincos_pos_embed_from_grid(
-        embed_dim // 2, grid[0]
-    )  # (H*W, D/2)
-    emb_w = get_1d_sincos_pos_embed_from_grid(
-        embed_dim // 2, grid[1]
-    )  # (H*W, D/2)
+    emb_h = get_1d_sincos_pos_embed_from_grid(embed_dim // 2, grid[0])  # (H*W, D/2)
+    emb_w = get_1d_sincos_pos_embed_from_grid(embed_dim // 2, grid[1])  # (H*W, D/2)
 
     emb = np.concatenate([emb_h, emb_w], axis=1)  # (H*W, D)
     return emb

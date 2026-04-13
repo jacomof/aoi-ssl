@@ -8,22 +8,19 @@ from torch.utils.data import DataLoader
 from pathlib import Path
 from torchmetrics import JaccardIndex
 from torchmetrics.wrappers import ClasswiseWrapper
-from argparse import ArgumentParser
-from argparse import Namespace
-import segmentation.utils as utils
 import albumentations as A
 from albumentations.core.transforms_interface import ImageOnlyTransform
 import cv2
 import psutil
 import time
-import random
+
 
 class AddZeroChannel(ImageOnlyTransform):
     """Add a channel of all zeros to the image."""
-    
+
     def __init__(self, always_apply=False, p=1.0):
         super(AddZeroChannel, self).__init__(always_apply, p)
-    
+
     def apply(self, img, **params):
         # img shape: (H, W, C)
         h, w, c = img.shape
@@ -31,27 +28,31 @@ class AddZeroChannel(ImageOnlyTransform):
         zero_channel = np.zeros((h, w, 1), dtype=img.dtype)
         # Concatenate along channel dimension
         return np.concatenate([img, zero_channel], axis=2)
-    
+
     def get_transform_init_args_names(self):
         return ()
-    
+
+
 class CopyChannel0(ImageOnlyTransform):
     """Copy the first channel to the second channel."""
-    
+
     def __init__(self, always_apply=False, p=1.0):
         super(CopyChannel0, self).__init__(always_apply, p)
-    
+
     def apply(self, img, **params):
         # img shape: (H, W, C)
-        return np.concatenate([img[..., :1], img[..., :1], img[..., :1]], axis=-1)  # Copy first channel three times
-    
+        return np.concatenate(
+            [img[..., :1], img[..., :1], img[..., :1]], axis=-1
+        )  # Copy first channel three times
+
     def get_transform_init_args_names(self):
         return ()
+
 
 class SafeJaccardIndex:
     def __init__(self, jaccard_metric):
         self.jaccard_metric = jaccard_metric
-    
+
     def __call__(self, preds, target):
         # For multi-label case, check each class individually
         result = {}
@@ -59,39 +60,44 @@ class SafeJaccardIndex:
             # Sum over all dimensions except the class dimension
             # target shape: (batch, classes, height, width)
             class_positive_count = target[:, i, :, :].sum()
-            
+
             prefixed_key = f"iou_{key}"
 
             if class_positive_count == 0:
-                print(f"Skipping class {key} due to no positive samples in target.")
                 result[prefixed_key] = None
             else:
                 # Extract single class data and compute IoU
-                class_preds = preds[:, i:i+1, :, :]  # Keep dimension
-                class_target = target[:, i:i+1, :, :]  # Keep dimension
-                
+                class_preds = preds[:, i : i + 1, :, :]  # Keep dimension
+                class_target = target[:, i : i + 1, :, :]  # Keep dimension
+
                 # Create a binary metric for this single class
                 from torchmetrics import JaccardIndex
+
                 single_class_metric = JaccardIndex(task="binary")
-                result[prefixed_key] = single_class_metric(class_preds.squeeze(1), class_target.squeeze(1)).item()
-        
+                result[prefixed_key] = single_class_metric(
+                    class_preds.squeeze(1), class_target.squeeze(1)
+                ).item()
+
         return result
 
-class KNNSegmentation():
 
-    def __init__(self, 
-                 encoder, 
-                 classes=["wire", "ball", "wedge", "epoxy"],
-                 profile_time=False,
-                 train_loader=None,
-                 val_loader=None,
-                 config=None,
-                 normalize=False,
-                 train_im_list=None,
-                 val_im_list=None,
-                 batch_size=32,
-                 input_resolution=(512, 512),
-                 profile_memory=False):
+class KNNSegmentation:
+
+    def __init__(
+        self,
+        encoder,
+        classes=["wire", "ball", "wedge", "epoxy"],
+        profile_time=False,
+        train_loader=None,
+        val_loader=None,
+        config=None,
+        normalize=False,
+        train_im_list=None,
+        val_im_list=None,
+        batch_size=32,
+        input_resolution=(512, 512),
+        profile_memory=False,
+    ):
 
         self.encoder = encoder
         self.device = next(encoder.parameters()).device
@@ -105,32 +111,36 @@ class KNNSegmentation():
         self.batch_size = batch_size
         self.input_resolution = input_resolution
         self.profile_memory = profile_memory
-        
+
         if config is not None:
             self.classes = config.classes
             self.batch_size = config.batch_size
             self.data_path = Path(config.data_path)
             self.input_resolution = config.input_resolution
             self.profile_time = config.profile_time
-            
-            normalization = A.Normalize(
-                mean=[0.1872, 0.2352],  # Pretrain dataset mean
-                std=[0.1924, 0.25308]   # Pretrain dataset std
-            )  
 
             self.transform = self.create_transforms(
                 normalize=normalize,
-                pretrained_model=False,)
+                pretrained_model=False,
+            )
 
             # Transformations for random cropping evaluations
             self.transform2 = A.Compose(
-                    [A.CropNonEmptyMaskIfExists(self.input_resolution[0], self.input_resolution[1])]
+                [
+                    A.CropNonEmptyMaskIfExists(
+                        self.input_resolution[0], self.input_resolution[1]
+                    )
+                ]
             )
 
             self.create_loaders(config)
         elif train_im_list is not None and val_im_list is not None:
-            self.train_loader = self.create_loaders_from_list(train_im_list, self.batch_size, shuffle=False)
-            self.val_loader = self.create_loaders_from_list(val_im_list, batch_size=self.batch_size, shuffle=False)
+            self.train_loader = self.create_loaders_from_list(
+                train_im_list, self.batch_size, shuffle=False
+            )
+            self.val_loader = self.create_loaders_from_list(
+                val_im_list, batch_size=self.batch_size, shuffle=False
+            )
 
         # Update your __init__ method:
         self.iou_classwise = SafeJaccardIndex(
@@ -146,7 +156,7 @@ class KNNSegmentation():
         )
 
     def create_loaders(self, config, train_set_size=0.7):
-        """ Create DataLoaders for training, validation, and testing.
+        """Create DataLoaders for training, validation, and testing.
 
         This is only used with when a config object is provided.
 
@@ -156,18 +166,23 @@ class KNNSegmentation():
         Returns:
             None
         """
-    
+
         im_list = [
-            self.data_path / "train" / img_file for img_file in os.listdir(self.data_path / "train")]
+            self.data_path / "train" / img_file
+            for img_file in os.listdir(self.data_path / "train")
+        ]
 
         # Set random seed for reproducible splits
         self.train_indices = np.random.choice(
-            len(im_list), int(train_set_size*len(im_list)), replace=False)
-        
-        self.val_indices = np.array(list(set(range(len(im_list))) - set(self.train_indices)))
+            len(im_list), int(train_set_size * len(im_list)), replace=False
+        )
+
+        self.val_indices = np.array(
+            list(set(range(len(im_list))) - set(self.train_indices))
+        )
 
         im_list = np.array(im_list)
-        
+
         # Create separate image lists
         train_im_list = im_list[self.train_indices].tolist()
         val_im_list = im_list[self.val_indices].tolist()
@@ -201,8 +216,10 @@ class KNNSegmentation():
 
         # Test loaders
         im_list_test = [
-            self.data_path / "test" / img_file for img_file in os.listdir(self.data_path / "test")]
-        
+            self.data_path / "test" / img_file
+            for img_file in os.listdir(self.data_path / "test")
+        ]
+
         self.aoi_test = RetrievalDataset(
             im_list_test,
             self.classes,
@@ -217,7 +234,7 @@ class KNNSegmentation():
         )
 
     def create_loaders_from_list(self, im_list, batch_size=32, shuffle=False):
-        """ Create DataLoaders from a list of image file paths.
+        """Create DataLoaders from a list of image file paths.
 
         Args:
             im_list (list of str or Path): List of image file paths.
@@ -226,9 +243,9 @@ class KNNSegmentation():
         Returns:
             DataLoader: DataLoader for the given image list.
         """
-        
+
         transforms = self.create_transforms(normalize=False, pretrained_model=False)
-        
+
         dataset = RetrievalDataset(
             im_list,
             self.classes,
@@ -246,9 +263,8 @@ class KNNSegmentation():
         # Channel 1 mean: 0.23459850405723615, std: 0.27069713773969
         normalization = A.Normalize(
             mean=[0.1781, 0.2224],  # Pretrain dataset mean
-            std=[0.2346, 0.2707]   # Pretrain dataset std
-        )  
-
+            std=[0.2346, 0.2707],  # Pretrain dataset std
+        )
 
         transform_list = [
             A.PadIfNeeded(
@@ -271,7 +287,6 @@ class KNNSegmentation():
 
         if normalize:
             transform_list.append(normalization)
-            print(f"Using normalization: {normalization.mean}, {normalization.std}")
 
         return A.Compose(transform_list)
 
@@ -279,10 +294,12 @@ class KNNSegmentation():
         """
         Compute the L2 distance between two tensors.
         """
-        return torch.linalg.norm((test_reps.unsqueeze(1) - database_reps.unsqueeze(0)), dim=2)
-    
+        return torch.linalg.norm(
+            (test_reps.unsqueeze(1) - database_reps.unsqueeze(0)), dim=2
+        )
+
     def cosine_distance(self, test_reps: torch.Tensor, database_reps: torch.Tensor):
-        """ Compute the Cosine distance between two tensors.
+        """Compute the Cosine distance between two tensors.
 
         Cosine distance is defined as 1 - cosine similarity.
 
@@ -293,12 +310,16 @@ class KNNSegmentation():
             torch.Tensor: Tensor of shape (N, M) containing the cosine distances between each pair
         """
         test_reps = test_reps / (1e-8 + torch.norm(test_reps, dim=-1, keepdim=True))
-        database_reps = database_reps / (1e-8 + torch.norm(database_reps, dim=-1, keepdim=True))
+        database_reps = database_reps / (
+            1e-8 + torch.norm(database_reps, dim=-1, keepdim=True)
+        )
 
-        return 1 - torch.einsum('ik,jk->ij', test_reps, database_reps) # Cosine distance is 1 - cosine similarity
+        return 1 - torch.einsum(
+            "ik,jk->ij", test_reps, database_reps
+        )  # Cosine distance is 1 - cosine similarity
 
     def combine_labels(self, label_masks, threshold=0.5, distances=None):
-        """ Combine the labels of the K nearest neighbors using a distance-weighted average and thresholding.
+        """Combine the labels of the K nearest neighbors using a distance-weighted average and thresholding.
 
         Args:
             label_masks (torch.Tensor): Tensor of shape (B, H, W, K, C) containing the labels of the K nearest neighbors for each pixel.
@@ -306,25 +327,31 @@ class KNNSegmentation():
             distances (torch.Tensor, optional): Tensor of shape (B, K) containing the distances of the K nearest neighbors. If provided, will be used for distance-weighted averaging.
         Returns:
             torch.Tensor: Tensor of shape (B, H, W, C) containing the combined binary labels for each pixel.
-        
+
         """
-        
+
         # label_masks: (B, H, W, K, C)
 
         if distances is not None:
             weights = 1 / (distances + 1e-8)  # Avoid division by zero
             weights = weights / weights.sum(dim=1, keepdim=True)  # Normalize weights
-            weights = weights.view(weights.shape[0], 1, 1, weights.shape[1], 1)  # Reshape to (B, 1, 1, K, 1)
+            weights = weights.view(
+                weights.shape[0], 1, 1, weights.shape[1], 1
+            )  # Reshape to (B, 1, 1, K, 1)
             label_masks = label_masks * weights  # Weight the labels by distances
 
         mean_labels = label_masks.sum(dim=3)  # Average over the K nearest neighbors
-        mean_labels_thresholded = (mean_labels > threshold).float()  # Threshold to get binary labels
+        mean_labels_thresholded = (
+            mean_labels > threshold
+        ).float()  # Threshold to get binary labels
         # (B, H, W, C)
         return mean_labels_thresholded
-    
-    def combine_labels_multi_thresholds(self, label_masks, thresholds=[0.5]*4, distances=None):
-        """ Combine the labels of the K nearest neighbors using a distance-weighted average and per-class thresholds.
-        
+
+    def combine_labels_multi_thresholds(
+        self, label_masks, thresholds=[0.5] * 4, distances=None
+    ):
+        """Combine the labels of the K nearest neighbors using a distance-weighted average and per-class thresholds.
+
         Args:
             label_masks (torch.Tensor): Tensor of shape (B, H, W, K, C) containing the labels of the K nearest neighbors for each pixel.
             thresholds (list of float): List of thresholds for each class for converting the averaged labels to binary.
@@ -332,24 +359,31 @@ class KNNSegmentation():
         Returns:
             torch.Tensor: Tensor of shape (B, H, W, C) containing the combined binary labels for each pixel.
         """
-        
+
         # label_masks: (B, H, W, K, C)
 
         if distances is not None:
             weights = 1 / (distances + 1e-8)  # Avoid division by zero
             weights = weights / weights.sum(dim=1, keepdim=True)  # Normalize weights
-            weights = weights.view(weights.shape[0], 1, 1, weights.shape[1], 1)  # Reshape to (B, 1, 1, K, 1)
+            weights = weights.view(
+                weights.shape[0], 1, 1, weights.shape[1], 1
+            )  # Reshape to (B, 1, 1, K, 1)
             label_masks = label_masks * weights  # Weight the labels by distances
 
         mean_labels = label_masks.sum(dim=3)  # Average over the K nearest neighbors
-        thresholds = torch.tensor(thresholds, device=mean_labels.device).view(1, 1, 1, -1)  # Shape: (1, 1, 1, C)
-        mean_labels_thresholded = (mean_labels > thresholds).float()  # Threshold to get binary labels
+        thresholds = torch.tensor(thresholds, device=mean_labels.device).view(
+            1, 1, 1, -1
+        )  # Shape: (1, 1, 1, C)
+        mean_labels_thresholded = (
+            mean_labels > thresholds
+        ).float()  # Threshold to get binary labels
         # (B, H, W, C)
         return mean_labels_thresholded
-        
 
-    def nearest_neighbors(self, test_representations: torch.Tensor, k, distance_metric="l2"):
-        """ Find the k nearest neighbors in the database for each test representation.
+    def nearest_neighbors(
+        self, test_representations: torch.Tensor, k, distance_metric="l2"
+    ):
+        """Find the k nearest neighbors in the database for each test representation.
 
         Args:
             test_representations (torch.Tensor): Tensor of shape (N, D) where N is the number of test samples and D is the feature dimension.
@@ -365,8 +399,10 @@ class KNNSegmentation():
             distances = self.l2_distance(test_representations, self.representations)
         elif distance_metric == "cosine":
             distances = self.cosine_distance(test_representations, self.representations)
-        
-        top_dist, top_indices = torch.topk(distances, k=k, dim=1, largest=False, sorted=True)
+
+        top_dist, top_indices = torch.topk(
+            distances, k=k, dim=1, largest=False, sorted=True
+        )
 
         return top_dist, top_indices
 
@@ -380,36 +416,41 @@ class KNNSegmentation():
         first = True
         labels = []
         with torch.no_grad():
-            if self.profile_memory:
-                print("Computing representations...!!!")
-                print("Dataloader length: ", len(dataloader))
             for batch in dataloader:
 
                 im = batch["image"]
                 curr_mem = torch.cuda.memory_allocated()
                 if self.profile_memory:
-                    print(f"Current memory allocated after loading image batch: {curr_mem / 1024**2:.2f} MB")
-                
+                    print(
+                        f"Current CUDA memory allocated after loading image batch: {curr_mem / 1024**2:.2f} MB"
+                    )
+
                 im = im.to(next(self.encoder.parameters()).device)
 
                 curr_mem = torch.cuda.memory_allocated()
 
                 if self.profile_memory:
-                    print(f"Current memory allocated after moving image batch to cuda: {curr_mem / 1024**2:.2f} MB")
-                
+                    print(
+                        f"Current CUDA memory allocated after moving image batch to cuda: {curr_mem / 1024**2:.2f} MB"
+                    )
+
                 representation = self.encoder(im)["x_norm_clstoken"]
 
                 if first:
                     representations = representation
                     first = False
                 else:
-                    representations = torch.cat((representations, representation), dim=0)
-                
+                    representations = torch.cat(
+                        (representations, representation), dim=0
+                    )
+
                 labels.append(batch["class_mask"])
 
                 if self.profile_memory:
-                    print(f"Current memory allocated after processing image batch: {curr_mem / 1024**2:.2f} MB")
-            
+                    print(
+                        f"Current CUDA memory allocated after processing image batch: {curr_mem / 1024**2:.2f} MB"
+                    )
+
                 cnt += 1
                 total_images_loaded += im.shape[0]
 
@@ -417,12 +458,18 @@ class KNNSegmentation():
                     print(f"Current RAM usage: {psutil.virtual_memory().percent}%")
                 torch.cuda.empty_cache()
 
-        print(f"Total images loaded: {total_images_loaded}")
         self.representations = representations
         self.labels = torch.cat(labels, dim=0)
 
-    def predict(self, x_test: torch.Tensor, k, distance_metric="cosine", weights="distance", threshold=0.5):
-        """ Predict the segmentation masks for the x_test images using KNN.
+    def predict(
+        self,
+        x_test: torch.Tensor,
+        k,
+        distance_metric="cosine",
+        weights="distance",
+        threshold=0.5,
+    ):
+        """Predict the segmentation masks for the x_test images using KNN.
 
         Args:
             x_test (torch.Tensor): Tensor of shape (B, C, H, W) containing the test images.
@@ -443,26 +490,34 @@ class KNNSegmentation():
             x_test = x_test.to(self.representations.device)
             end_time = time.time()
             if self.profile_time:
-                print(f"Time taken to move test data to device: {end_time - start_time:.2f} seconds")
-            
+                print(
+                    f"Time taken to move test data to device: {end_time - start_time:.2f} seconds"
+                )
+
             start_time = time.time()
             x_test_representation = self.encoder(x_test)["x_norm_clstoken"]
             end_time = time.time()
             if self.profile_time:
-                print(f"Time taken to compute representation: {end_time - start_time:.2f} seconds")
+                print(
+                    f"Time taken to compute representation: {end_time - start_time:.2f} seconds"
+                )
 
-            start_time = time.time()  
-            top_distances, top_indices = self.nearest_neighbors(x_test_representation, k, distance_metric=distance_metric)
-            if self.profile_time: 
-                print(f"Top distances shape: {top_distances.shape}")
-            
+            start_time = time.time()
+            top_distances, top_indices = self.nearest_neighbors(
+                x_test_representation, k, distance_metric=distance_metric
+            )
+
             # Shape of top_distances, top_indices: (batch_size, k)
             top_indices = top_indices.to(self.labels.device)
             top_distances = top_distances.to(self.labels.device)
-            winner_labels = self.labels[top_indices].permute(0, 2, 3, 1, 4)  # Shape: (batch_size, k, H, W, C)
+            winner_labels = self.labels[top_indices].permute(
+                0, 2, 3, 1, 4
+            )  # Shape: (batch_size, k, H, W, C)
             end_time = time.time()
             if self.profile_time:
-                print(f"Time taken to compute nearest neighbors: {end_time - start_time:.2f} seconds")
+                print(
+                    f"Time taken to compute nearest neighbors: {end_time - start_time:.2f} seconds"
+                )
 
             distances = None
             if weights == "distance":
@@ -471,22 +526,34 @@ class KNNSegmentation():
             start_time = time.time()
             if type(threshold) is list:
                 # If thresholds are provided for each class
-                print(f"Using multi-thresholds: {threshold}")
-                combined_labels = self.combine_labels_multi_thresholds(winner_labels, thresholds=threshold, distances=distances)
+                combined_labels = self.combine_labels_multi_thresholds(
+                    winner_labels, thresholds=threshold, distances=distances
+                )
             else:
-                print(f"Using single threshold: {threshold}")
-                combined_labels = self.combine_labels(winner_labels, threshold=threshold, distances=distances)  # Shape: (batch_size, H, W, C)
+                combined_labels = self.combine_labels(
+                    winner_labels, threshold=threshold, distances=distances
+                )  # Shape: (batch_size, H, W, C)
 
             end_time = time.time()
             if self.profile_time:
-                print(f"Time taken to combine labels: {end_time - start_time:.2f} seconds")
-            
-            combined_labels = combined_labels.permute(0, 3, 1, 2).long() # Shape: (batch_size, C, H, W)
+                print(
+                    f"Time taken to combine labels: {end_time - start_time:.2f} seconds"
+                )
+
+            combined_labels = combined_labels.permute(
+                0, 3, 1, 2
+            ).long()  # Shape: (batch_size, C, H, W)
 
         return combined_labels
 
-
-    def evaluate(self, k=10, distance_metric="cosine", weights="distance", threshold=0.5, config=None) -> dict:
+    def evaluate(
+        self,
+        k=10,
+        distance_metric="cosine",
+        weights="distance",
+        threshold=0.5,
+        config=None,
+    ) -> dict:
         """
         Evaluate the KNN segmentation model on the validation set.
 
@@ -503,7 +570,6 @@ class KNNSegmentation():
         # Initialize representations and labels
         self.compute_representations(self.train_loader)
 
-
         classwise_ious = []
 
         with torch.no_grad():
@@ -511,15 +577,20 @@ class KNNSegmentation():
 
                 # profile memory before processing batch
                 if self.profile_memory:
-                    print(f"Current memory allocated before processing batch: {torch.cuda.memory_allocated() / 1024**2:.2f} MB")
+                    print(
+                        f"Current CUDA memory allocated before processing batch: {torch.cuda.memory_allocated() / 1024**2:.2f} MB"
+                    )
                     # cpu memory
                     print(f"Current RAM usage: {psutil.virtual_memory().percent}%")
                 class_mask = batch["class_mask"]
-                class_mask = class_mask.permute(0, 3, 1, 2).long()  # Shape: (batch_size, C, H, W)
-                
+                class_mask = class_mask.permute(
+                    0, 3, 1, 2
+                ).long()  # Shape: (batch_size, C, H, W)
+
                 x_test = batch["image"]
-                combined_labels = self.predict(x_test, k, distance_metric, weights, threshold) # Shape: (batch_size, H, W, C)
-                
+                combined_labels = self.predict(
+                    x_test, k, distance_metric, weights, threshold
+                )  # Shape: (batch_size, H, W, C)
 
                 start_time = time.time()
 
@@ -527,14 +598,16 @@ class KNNSegmentation():
                 print(f"Classwise IoUs: {classwise_ious[-1]}")
                 end_time = time.time()
                 if self.profile_time:
-                    print(f"Time taken to compute classwise IoUs: {end_time - start_time:.2f} seconds")
+                    print(
+                        f"Time taken to compute classwise IoUs: {end_time - start_time:.2f} seconds"
+                    )
 
         # classwise_ious: [{"iou_class_1": iou_class_1, "iou_class_2": iou_class_2, ...}, ...]
         # Compute mean IoU for each class
         mean_ious = {}
         for c in classwise_ious[0]:
             # For each class
-            iou_list = [iou[c] for iou in classwise_ious if iou[c] != None]
+            iou_list = [iou[c] for iou in classwise_ious if iou[c] is not None]
             if iou_list:
                 mean_ious[c] = np.mean(iou_list)
             else:
@@ -542,8 +615,3 @@ class KNNSegmentation():
 
         print("Mean IoUs: ", mean_ious)
         return mean_ious
-
-
-
-
-    

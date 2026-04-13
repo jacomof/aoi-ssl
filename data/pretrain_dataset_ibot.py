@@ -30,10 +30,7 @@ class PretrainDatasetiBot(Dataset):
 
         self.epoch = 0
 
-        print(f"New dataset created.")
-
     def set_epoch(self, epoch: int):
-        print(f"Setting epoch {epoch} in dataset.")
         self.epoch = epoch
 
     def __len__(self) -> int:
@@ -44,11 +41,15 @@ class PretrainDatasetiBot(Dataset):
         img = load_buffer_pair_image(img0_path, img1_path)
         img0 = img[..., 0]
 
-        assert not np.isnan(img).any(), f"NaN values found in image {file} before mapping to [0, 1]"
-        img = img/255.0
-        assert not np.isnan(img).any(), f"NaN values found in image {file} after mapping to [0, 1]"
+        assert not np.isnan(
+            img
+        ).any(), f"NaN values found in image {file} before mapping to [0, 1]"
+        img = img / 255.0
+        assert not np.isnan(
+            img
+        ).any(), f"NaN values found in image {file} after mapping to [0, 1]"
 
-        #assert np.any(img >= 0) and np.any(img <= 1), f"Image {file} has values outside [0, 1] range"
+        # assert np.any(img >= 0) and np.any(img <= 1), f"Image {file} has values outside [0, 1] range"
 
         mask = (img0 > 0).astype(np.uint8)
         if self.transform is not None:
@@ -64,6 +65,8 @@ class PretrainDatasetiBot(Dataset):
 
         for im in imgs:
             if im.isnan().any():
-                raise ValueError(f"NaN values found in image {file} after transformation")      
+                raise ValueError(
+                    f"NaN values found in image {file} after transformation"
+                )
 
         return {"image": imgs, "file": file, "mask": masks}

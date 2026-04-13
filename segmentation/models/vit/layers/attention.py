@@ -1,11 +1,12 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
+# This file includes code adapted from Meta Platforms, Inc. and affiliates:
+# https://github.com/facebookresearch/dino
 #
-# This source code is licensed under the Apache License, Version 2.0
-# found in the LICENSE file in the root directory of this source tree.
+# Original code license: Apache License 2.0.
+# You may obtain a copy of the license in this repository's LICENSE file.
 
-# References:
-#   https://github.com/facebookresearch/dino/blob/master/vision_transformer.py
-#   https://github.com/rwightman/pytorch-image-models/tree/master/timm/models/vision_transformer.py
+# Modifications in this repository:
+# - Added support for xFormers.
+# - Reorganized and split into components.
 
 import os
 import warnings
@@ -13,16 +14,12 @@ import warnings
 import torch
 from torch import nn
 
-
 XFORMERS_ENABLED = os.environ.get("XFORMERS_DISABLED") is None
 try:
     if XFORMERS_ENABLED:
         from xformers.ops import memory_efficient_attention, unbind
-
         XFORMERS_AVAILABLE = True
-        warnings.warn("xFormers is available (Attention)")
     else:
-        warnings.warn("xFormers is disabled (Attention)")
         raise ImportError
 except ImportError:
     XFORMERS_AVAILABLE = False
@@ -51,7 +48,11 @@ class Attention(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         B, N, C = x.shape
-        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
+        qkv = (
+            self.qkv(x)
+            .reshape(B, N, 3, self.num_heads, C // self.num_heads)
+            .permute(2, 0, 3, 1, 4)
+        )
 
         q, k, v = qkv[0] * self.scale, qkv[1], qkv[2]
         attn = q @ k.transpose(-2, -1)

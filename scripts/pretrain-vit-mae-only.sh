@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -p lanai   # partition (queue)
+# SLURM specific configs to run on a cluster. You may need to modify these based on your cluster's configuration.
 #SBATCH -c 6         # number of cores            
 #SBATCH -t 100:00:00    # time (HH:MM:SS)
 #SBATCH --gres=gpu:1    # 1 indicates # of GPUs  
@@ -17,6 +17,7 @@ conda activate aoi-ssl
 # debugging flags (optional)
 export PYTHONDONTWRITEBYTECODE=1
 
+mlflow server --host 127.0.0.1 --port 5000 --backend-store-uri ./mlruns --default-artifact-root ./mlruns
 
 python -m pretrain.mae.pretrain --config ./configs/pretrain/pretrain_main.yml \
     --model_config ./configs/pretrain/pretrain_vit_mae_only_model_config.yml \

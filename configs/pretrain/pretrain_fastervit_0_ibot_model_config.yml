@@ -1,3 +1,7 @@
+# Experiment Tracking
+# MLFlow Experiment name
+name: aoi-pretrain-fastervit-ibot
+
 # Training pipeline
 epochs: 3000
 batch_size: 8
@@ -6,9 +10,8 @@ num_workers: 1
 gradient_clip_val: 5.0
 precision: "16-mixed"
 test_batch_size: 8
-name: aoi-pretrain-fastervit-ibot
 
-input_resolution: [512, 512]
+input_resolution: [512, 512] # must match img_size in model_params
 
 normalize: true # Whether to normalize the input images
 base_augmentations: true
@@ -23,10 +26,10 @@ model_params:
   lr: 2e-4
   accumulate_grad_batches: 1
   min_lr: 1e-7
-  img_size: 224
+  img_size: 224 # global crop size
   mask_ratio: 0.75
   in_chans: 2
-  # Vit-B settings
+  # Encoder settings
   vit_type: "t"
   patch_size: 4
   student_temp_cls: 0.1
@@ -51,9 +54,8 @@ model_params:
   nlocal_crops: 6
   warmup_epochs: 10
   num_patches_global: 196
-  use_fastervit_0: true
-
+  use_fastervit_0: true # Set True to use FasterViT in iBot pretraining
 
 
 # Model checkpoint
-# ckpt_path: './checkpoints/pretrain_vit_dino_example.ckpt'
+# ckpt_path: './checkpoints/aoi-pretrain-fastervit-ibot/pretrain_fastervit_ibot_example.ckpt'

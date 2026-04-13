@@ -209,9 +209,9 @@ class VisionTransformer(nn.Module):
         )
         assert (w0, h0) == patch_pos_embed.shape[-2:]
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
-        return torch.cat(
-            (class_pos_embed.unsqueeze(0), patch_pos_embed), dim=1
-        ).to(previous_dtype)
+        return torch.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), dim=1).to(
+            previous_dtype
+        )
 
     def prepare_tokens_with_masks(self, x, masks=None):
         B, nc, w, h = x.shape
@@ -250,12 +250,8 @@ class VisionTransformer(nn.Module):
             output.append(
                 {
                     "x_norm_clstoken": x_norm[:, 0],
-                    "x_norm_regtokens": x_norm[
-                        :, 1 : self.num_register_tokens + 1
-                    ],
-                    "x_norm_patchtokens": x_norm[
-                        :, self.num_register_tokens + 1 :
-                    ],
+                    "x_norm_regtokens": x_norm[:, 1 : self.num_register_tokens + 1],
+                    "x_norm_patchtokens": x_norm[:, self.num_register_tokens + 1 :],
                     "x_prenorm": x,
                     "masks": masks,
                 }
@@ -286,9 +282,7 @@ class VisionTransformer(nn.Module):
         # If n is an int, take the n last blocks. If it's a list, take them
         output, total_block_len = [], len(self.blocks)
         blocks_to_take = (
-            range(total_block_len - n, total_block_len)
-            if isinstance(n, int)
-            else n
+            range(total_block_len - n, total_block_len) if isinstance(n, int) else n
         )
         for i, blk in enumerate(self.blocks):
             x = blk(x)
@@ -304,9 +298,7 @@ class VisionTransformer(nn.Module):
         output, i, total_block_len = [], 0, len(self.blocks[-1])
         # If n is an int, take the n last blocks. If it's a list, take them
         blocks_to_take = (
-            range(total_block_len - n, total_block_len)
-            if isinstance(n, int)
-            else n
+            range(total_block_len - n, total_block_len) if isinstance(n, int) else n
         )
         for block_chunk in self.blocks:
             for blk in block_chunk[i:]:  # Passing the nn.Identity()

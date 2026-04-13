@@ -44,7 +44,9 @@ class iBotLoss(nn.Module):
     def softmax_center_teacher_cls(self, teacher_cls: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():
             self._update_center_cls(teacher_cls)
-        return F.softmax((teacher_cls - self.center_cls) / self.teacher_temp_cls, dim=-1)
+        return F.softmax(
+            (teacher_cls - self.center_cls) / self.teacher_temp_cls, dim=-1
+        )
 
     def softmax_center_teacher_patch(self, teacher_patch: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():

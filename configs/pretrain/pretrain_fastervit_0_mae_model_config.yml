@@ -1,3 +1,7 @@
+# Experiment Tracking
+# MLFlow Experiment name
+name: aoi-pretrain-fastervit-mae
+
 # Training pipeline
 epochs: 3000
 batch_size: 8
@@ -6,10 +10,9 @@ num_workers: 1
 gradient_clip_val: 5.0
 precision: "16-mixed"
 test_batch_size: 8
-name: aoi-pretrain-fastervit-mae
 
 
-input_resolution: [512, 512]
+input_resolution: [512, 512] # must match img_size in model_params
 
 normalize: true # Whether to normalize the input images
 patience: 1000
@@ -21,7 +24,7 @@ input_resolution: [512, 512]
 model_params:
   lr: 1.5e-4 # base learning rate used during pretraining in the paper.
   min_lr: 1e-7 # small learning rate that's linearly ramped up
-  img_size: 512
+  img_size: 512 # input image size for fixed resolution models
   mask_ratio: 0.75
   warmup_steps: 1 # For MAE this represents the number of warmup epochs
   in_chans: 2
@@ -29,12 +32,7 @@ model_params:
   vit_type: "t"
   patch_size: 16
   reg_tokens: 0
-  use_fastervit_0: true
-  #reg_tokens: 4 # Used because in the paper "VISION TRANSFORMERS NEED REGISTERS" they get 
-  # maximum segmentation mIoU with 4 register tokens
-
-
+  use_fastervit_0: true # Set True to use FasterViT in MAE pretraining
 
 # Model checkpoint
-# ckpt_path: './checkpoints/pretrain_vit_dino_example.ckpt'
-# ckpt_path: './checkpoints/pretrain_fastervit0_mae_example.ckpt'
+# ckpt_path: './checkpoints/aoi-pretrain-fastervit-mae/pretrain_fastervit0_mae_example.ckpt'

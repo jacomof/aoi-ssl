@@ -23,7 +23,6 @@ class MaskedAutoencoder(nn.Module):
         # For the MAE decoder a fixed number of patches should be
         # followed.
         self.use_mae = parameters.get("use_mae", True)
-        print("Using MAE decoder: ", self.use_mae)
         if self.use_mae:
             self.decoder = MaskedDecoder(
                 num_patches=num_patches,
@@ -52,9 +51,7 @@ class MaskedAutoencoder(nn.Module):
 
         # keep the first subset
         ids_keep = ids_shuffle[:, :len_keep]
-        x_masked = torch.gather(
-            x, dim=1, index=ids_keep.unsqueeze(-1).repeat(1, 1, D)
-        )
+        x_masked = torch.gather(x, dim=1, index=ids_keep.unsqueeze(-1).repeat(1, 1, D))
 
         # generate the binary mask: 0 is keep, 1 is remove
         mask = torch.ones([N, L], device=x.device)
@@ -73,7 +70,7 @@ class MaskedAutoencoder(nn.Module):
 
         h = w = imgs.shape[2] // p
         # [N, 3, H, W] -> [N, 3, H/p, p, W/p, p]
-        x = imgs.reshape(shape=(imgs.shape[0],  h, w, p, p, self.num_channels))
+        x = imgs.reshape(shape=(imgs.shape[0], h, w, p, p, self.num_channels))
         x = torch.einsum("nchpwq->nhwpqc", x)
         x = x.reshape(shape=(imgs.shape[0], h * w, p**2 * self.num_channels))
         return x
@@ -110,9 +107,7 @@ class MaskedAutoencoder(nn.Module):
             loss = (y_hat - y) ** 2
             loss = loss.mean(dim=-1)  # [N, L], mean loss per patch
 
-            loss = (
-                loss * masks
-            ).sum() / masks.sum()  # mean loss on removed patches
+            loss = (loss * masks).sum() / masks.sum()  # mean loss on removed patches
         return loss, y_hat, masks, x_patches
 
 
@@ -173,9 +168,7 @@ class MaskedDecoder(nn.Module):
         pos_embed = get_2d_sincos_pos_embed(
             self.pos_embed.shape[-1], int(self.num_patches**0.5), cls_token=True
         )
-        self.pos_embed.data.copy_(
-            torch.from_numpy(pos_embed).float().unsqueeze(0)
-        )
+        self.pos_embed.data.copy_(torch.from_numpy(pos_embed).float().unsqueeze(0))
 
         # timm's trunc_normal_(std=.02) is effectively normal_(std=0.02) as cutoff is too big (2.)
         torch.nn.init.normal_(self.mask_token, std=0.02)
@@ -228,12 +221,8 @@ def get_2d_sincos_pos_embed_from_grid(embed_dim, grid):
     assert embed_dim % 2 == 0
 
     # use half of dimensions to encode grid_h
-    emb_h = get_1d_sincos_pos_embed_from_grid(
-        embed_dim // 2, grid[0]
-    )  # (H*W, D/2)
-    emb_w = get_1d_sincos_pos_embed_from_grid(
-        embed_dim // 2, grid[1]
-    )  # (H*W, D/2)
+    emb_h = get_1d_sincos_pos_embed_from_grid(embed_dim // 2, grid[0])  # (H*W, D/2)
+    emb_w = get_1d_sincos_pos_embed_from_grid(embed_dim // 2, grid[1])  # (H*W, D/2)
 
     emb = np.concatenate([emb_h, emb_w], axis=1)  # (H*W, D)
     return emb

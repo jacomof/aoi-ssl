@@ -1,3 +1,7 @@
+# Experiment Tracking
+# MLFlow Experiment name
+name: aoi-pretrain-mae
+
 # Training pipeline
 epochs: 3000
 batch_size: 16 # Set to a lot larger value! Low value for testing purposes
@@ -8,9 +12,8 @@ precision: "16-mixed"
 accumulate_grad_batches: 1
 test_batch_size: 32
 normalize: true # Whether to normalize the input images
-name: aoi-pretrain-mae
 
-input_resolution: [512, 512]
+input_resolution: [512, 512] # must match img_size in model_params
 
 # Model parameters
 model_params:
@@ -24,12 +27,6 @@ model_params:
   vit_type: "t"
   patch_size: 16
   reg_tokens: 0
-  #reg_tokens: 4 # Used because in the paper "VISION TRANSFORMERS NEED REGISTERS" they get 
-  # maximum segmentation mIoU with 4 register tokens
 
 # Model checkpoint
-ckpt_path: null
-
-# Global configs
-dataset_name: "pretrain_with_unlabelled"
-# data_path: "./datasets/pretrain_with_unlabelled/"
+# ckpt_path: './checkpoints/aoi-pretrain-mae/pretrain_vit_mae_example.ckpt'

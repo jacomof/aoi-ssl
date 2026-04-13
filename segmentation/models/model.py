@@ -7,11 +7,9 @@ import lightning.pytorch as pl
 import torch.nn.functional as F
 from torchmetrics.wrappers import ClasswiseWrapper
 
-from segmentation.models.ema import ModelEma
 from data.image_tiling import reconstruct_image_and_prediction
-from scipy.linalg import svdvals
-from torch.distributions import Categorical
 from segmentation.metrics import Metrics
+
 # Create a binary metric for this single class
 from torchmetrics import JaccardIndex
 
@@ -19,31 +17,31 @@ from torchmetrics import JaccardIndex
 class SafeJaccardIndex:
     def __init__(self, jaccard_metric):
         self.jaccard_metric = jaccard_metric
-    
+
     def __call__(self, preds, target):
         # For multi-label case, check each class individually
         result = {}
         for i, key in enumerate(self.jaccard_metric.labels):
             # Sum over all dimensions except the class dimension
             # target shape: (batch, classes, height, width)
-            print("Target shape:", target.shape)
             class_positive_count = target[:, i].sum()
-            
+
             prefixed_key = f"iou_{key}"
 
             if class_positive_count == 0:
-                print(f"Skipping class {key} due to no positive samples in target.")
                 result[prefixed_key] = None
             else:
                 # Extract single class data and compute IoU
                 class_preds = preds[:, i].float()  # Keep dimension
                 class_target = target[:, i].float()  # Keep dimension
-                
 
                 single_class_metric = JaccardIndex(task="binary").to(preds.device)
-                result[prefixed_key] = single_class_metric(class_preds, class_target).item()
-        
+                result[prefixed_key] = single_class_metric(
+                    class_preds, class_target
+                ).item()
+
         return result
+
 
 class PLBaseModel(pl.LightningModule, ABC):
     def __init__(self, model, parameters, classes=None):
@@ -53,10 +51,8 @@ class PLBaseModel(pl.LightningModule, ABC):
 
         parameters["model"] = self.model.__class__.__name__
         parameters["num_param"] = sum(p.numel() for p in self.model.parameters())
-        
-        
-        self.save_hyperparameters(parameters)
 
+        self.save_hyperparameters(parameters)
 
         # Check if classes are provided for segmentation
         if classes:
@@ -98,7 +94,6 @@ class PLBaseModel(pl.LightningModule, ABC):
     def configure_optimizers(self):
         raise NotImplementedError
 
-
     def tiled_inference(self, batch: Any, use_ema=False):
         """Infer over a grid of image tiles and stitch them back together
         before returning the prediction and adjusted image in the batch.
@@ -122,9 +117,7 @@ class PLBaseModel(pl.LightningModule, ABC):
                 )
             else:
                 pred = self.model(batch["image"][idx].reshape(-1, C, H, W))
-            pred = pred.moveaxis(1, -1).reshape(
-                tile_H, tile_W, H, W, len(self.classes)
-            )
+            pred = pred.moveaxis(1, -1).reshape(tile_H, tile_W, H, W, len(self.classes))
 
             # Reconstruct the original image and prediction shapes
             pred, img = reconstruct_image_and_prediction(
@@ -250,7 +243,7 @@ class PLBaseModel(pl.LightningModule, ABC):
         if len(y_hat.size()) != 0:
             # Reshape the predictions and masks to allow for classwise IoU computation,
             # view does not work as they're not located contiguous.
-            B, H, W, C = class_mask.shape # one channel per class
+            B, H, W, C = class_mask.shape  # one channel per class
             y_hat = y_hat.reshape(B * H * W, C).long()
             class_mask = class_mask.reshape(B * H * W, C).long()
 
@@ -283,26 +276,23 @@ class PLBaseModel(pl.LightningModule, ABC):
                 mets = Metrics(embeddings)
                 dim_collapse = mets.auc_embedding_collapse()
                 dim_collapse_entropy = mets.entropy_embedding_collapse()
-                
+
                 if valid_ious:
                     metric_dict = {
                         **iou_class,
                         f"{context}/iou": mean_iou,
                         f"{context}/auc_embedding": dim_collapse,
-                        f"{context}/entropy_embedding": dim_collapse_entropy
+                        f"{context}/entropy_embedding": dim_collapse_entropy,
                     }
                 else:
                     metric_dict = {
                         # No valid classes to evaluate
                         f"{context}/auc_embedding": dim_collapse,
-                        f"{context}/entropy_embedding": dim_collapse_entropy
-                    } 
+                        f"{context}/entropy_embedding": dim_collapse_entropy,
+                    }
             else:
                 if valid_ious:
-                    metric_dict = {
-                        **iou_class,
-                        f"{context}/iou": mean_iou
-                    }
+                    metric_dict = {**iou_class, f"{context}/iou": mean_iou}
                 else:
                     metric_dict = {
                         # No valid classes to evaluate
@@ -310,5 +300,3 @@ class PLBaseModel(pl.LightningModule, ABC):
 
         print(f"Metrics for {context}: {metric_dict}")
         return metric_dict
-
-

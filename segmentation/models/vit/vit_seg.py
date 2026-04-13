@@ -2,12 +2,12 @@ import math
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from segmentation.models.lora import LoRA
 from segmentation.models.vit.layers import PatchEmbed
-from segmentation.models.vit import VisionTransformer, init_vit
+from segmentation.models.vit import VisionTransformer
 from segmentation.models.upernet_decoder import UperNetDecoder
+
 
 class ViTSegmentation(nn.Module):
     def __init__(
@@ -55,7 +55,7 @@ class ViTSegmentation(nn.Module):
         self.decoder_cls = decoders[decoder_cls]
 
         # intialize model with encoder and decoder based on settings in yml file.
-        
+
         # self.set_encoder(
         #     init_vit(
         #         size=kwargs["vit_type"],
@@ -65,7 +65,6 @@ class ViTSegmentation(nn.Module):
         #     **kwargs
         # )
         self.set_decoder(**kwargs)
-
 
     def set_encoder(
         self,
@@ -96,7 +95,6 @@ class ViTSegmentation(nn.Module):
 
         # ===== Optionally add LoRA layers to the Encoder ==========
         if self.use_lora:
-            print("Using LoRA with rank:", self.r)
             self.lora_layers = list(range(len(self.encoder.blocks)))
             self.w_a = []
             self.w_b = []
@@ -104,15 +102,15 @@ class ViTSegmentation(nn.Module):
             # Freeze ALL encoder parameters first
             for param in self.encoder.parameters():
                 param.requires_grad = False
-            
+
             # Unfreeze patch embedding for input adaptation
-            if hasattr(self.encoder, 'patch_embed'):
+            if hasattr(self.encoder, "patch_embed"):
                 for param in self.encoder.patch_embed.parameters():
                     param.requires_grad = True
-        
+
             # Unfreeze layer norm parameters (often helpful)
             for name, param in self.encoder.named_parameters():
-                if 'norm' in name or 'ln' in name:
+                if "norm" in name or "ln" in name:
                     param.requires_grad = True
 
             for i, block in enumerate(self.encoder.blocks):
@@ -142,7 +140,7 @@ class ViTSegmentation(nn.Module):
                 param.requires_grad = False
 
             # Keep patch embedding trainable for input adaptation
-            if use_dinov2 and hasattr(self.encoder, 'patch_embed'):
+            if use_dinov2 and hasattr(self.encoder, "patch_embed"):
                 for param in self.encoder.patch_embed.parameters():
                     param.requires_grad = True
 
@@ -181,6 +179,6 @@ class ViTSegmentation(nn.Module):
         # save embeddings to compute collapse
         embeds = feature[0]
         # Decoder combines multiple layers of the encoder. Each layer's output is the patch tokens
-        logits = self.decoder(feature) # [Layer1, Layer2, Layer3, Layer4]
+        logits = self.decoder(feature)  # [Layer1, Layer2, Layer3, Layer4]
 
         return logits, embeds

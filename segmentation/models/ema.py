@@ -54,7 +54,7 @@ class ModelEma(nn.Module):
                     self.decay * ema_v + (1.0 - self.decay) * model_v,
                     non_blocking=True,
                 )
-                
+
     @rank_zero_only
     def update(self, model):
         self._update(model)

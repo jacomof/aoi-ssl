@@ -58,9 +58,7 @@ class UperNetDecoder(nn.Module):
 
         # Using different pooling method, no PrRoIPool2D, just
         # average, max pooling. Need PrRoIPool2D for pool scale 1.
-        self.pool = (
-            nn.AdaptiveMaxPool2d if pool_mode == "max" else nn.AdaptiveAvgPool2d
-        )
+        self.pool = nn.AdaptiveMaxPool2d if pool_mode == "max" else nn.AdaptiveAvgPool2d
 
         # PPM Module
         self.ppm = []
@@ -118,9 +116,7 @@ class UperNetDecoder(nn.Module):
         H, W = out.shape[-2], out.shape[-1]
         ppm_out = [out]
         for conv_block in self.ppm:
-            ppm_out.append(
-                F.interpolate(conv_block(out), size=(H, W), mode="bilinear")
-            )
+            ppm_out.append(F.interpolate(conv_block(out), size=(H, W), mode="bilinear"))
         ppm_out = torch.cat(ppm_out, 1)
         ppm_out = self.ppm_last_conv(ppm_out)
 
@@ -154,6 +150,4 @@ class UperNetDecoder(nn.Module):
 
         x = self.head(x)
 
-        return F.interpolate(
-            x, self.resolution, mode="bilinear", align_corners=False
-        )
+        return F.interpolate(x, self.resolution, mode="bilinear", align_corners=False)

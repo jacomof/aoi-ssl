@@ -8,6 +8,7 @@ import numpy as np
 # from aimstack.base import Image
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch import loggers as pl_loggers
+
 # from aimstack.pytorch_lightning_tracker.loggers import BaseLogger as AimLogger
 
 
@@ -17,7 +18,7 @@ def overlay_segmentation(
     alpha: float = 0.4,
     contour_thickness: int = 1,
     light_condition: int = 0,
-    output_size: tuple[int, int] = (768, 768)
+    output_size: tuple[int, int] = (768, 768),
 ) -> np.ndarray:
     """Overlay the image with the segmentation predictions
 
@@ -35,9 +36,9 @@ def overlay_segmentation(
     """
 
     # Ignore the second lighting condition,
-    img = (
-        img[light_condition].clone().squeeze().detach().cpu().numpy() * 255
-    ).astype(np.uint8)
+    img = (img[light_condition].clone().squeeze().detach().cpu().numpy() * 255).astype(
+        np.uint8
+    )
     mask = mask.clone().squeeze().cpu().numpy().astype(np.uint8)
 
     n_colour = mask.shape[-1]
@@ -77,6 +78,7 @@ def overlay_segmentation(
     # Output shape: (H, W, C)
     return viz
 
+
 def overlay_segmentation_with_legend(
     img: torch.Tensor,
     mask: torch.Tensor,
@@ -84,7 +86,7 @@ def overlay_segmentation_with_legend(
     contour_thickness: int = 1,
     light_condition: int = 0,
     output_size: tuple[int, int] = (768, 768),
-    label_names: Optional[list[str]] = ["Wire", "Ball", "Wedge", "Epoxy"]
+    label_names: Optional[list[str]] = ["Wire", "Ball", "Wedge", "Epoxy"],
 ) -> np.ndarray:
     """Overlay the image with the segmentation predictions and add a legend bar.
 
@@ -103,9 +105,9 @@ def overlay_segmentation_with_legend(
     """
 
     # Ignore the second lighting condition,
-    img = (
-        img[light_condition].clone().squeeze().detach().cpu().numpy() * 255
-    ).astype(np.uint8)
+    img = (img[light_condition].clone().squeeze().detach().cpu().numpy() * 255).astype(
+        np.uint8
+    )
     mask = mask.clone().squeeze().cpu().numpy().astype(np.uint8)
 
     n_colour = mask.shape[-1]
@@ -144,7 +146,9 @@ def overlay_segmentation_with_legend(
 
     # --- Add legend bar ---
     legend_height = 40
-    legend = np.ones((legend_height, output_size[0], 3), dtype=np.uint8) * 255  # white bar
+    legend = (
+        np.ones((legend_height, output_size[0], 3), dtype=np.uint8) * 255
+    )  # white bar
 
     font = cv2.FONT_HERSHEY_SIMPLEX
     font_scale = 0.7
@@ -176,6 +180,7 @@ def overlay_segmentation_with_legend(
 
     # Output shape: (H+legend_height, W, C)
     return viz_with_legend
+
 
 class SegmentationLoggerMixin:
     def log_segmentation_overlay(
@@ -215,8 +220,7 @@ class SegmentationLoggerMixin:
 
         # Log the images (Give them different names)
         overlays = [
-            overlay_segmentation(image, mask)
-            for image, mask in zip(images, masks)
+            overlay_segmentation(image, mask) for image, mask in zip(images, masks)
         ]
 
         for experiment in viz_experiments:

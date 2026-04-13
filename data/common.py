@@ -8,7 +8,6 @@ import cv2
 import numpy as np
 import torch
 
-
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
 BUFFER_STEM_PATTERN = re.compile(r"^(?P<base>.+)_buffer_?(?P<idx>[01])$")
 
@@ -19,7 +18,11 @@ def list_images(path: Path) -> list[Path]:
     if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS:
         return [path]
     return sorted(
-        [p for p in path.rglob("*") if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS]
+        [
+            p
+            for p in path.rglob("*")
+            if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS
+        ]
     )
 
 
@@ -42,7 +45,9 @@ def list_buffer_image_pairs(
     grouped: dict[tuple[Path, str], dict[int, Path]] = {}
 
     for candidate in candidates:
-        if excluded_parts and any(part.lower() in excluded_parts for part in candidate.parts):
+        if excluded_parts and any(
+            part.lower() in excluded_parts for part in candidate.parts
+        ):
             continue
 
         stem_info = split_buffer_stem(candidate.stem)
@@ -152,7 +157,9 @@ def find_label_for_image(image_path: Path) -> Path | None:
     return None
 
 
-def load_mask(mask_path: Path | None, height: int, width: int, num_classes: int) -> np.ndarray:
+def load_mask(
+    mask_path: Path | None, height: int, width: int, num_classes: int
+) -> np.ndarray:
     if mask_path is None:
         return np.zeros((height, width, num_classes), dtype=np.float32)
 

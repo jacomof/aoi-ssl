@@ -67,8 +67,12 @@ class SemanticDataset(Dataset):
         image = self._apply_channel_regularization(image)
 
         h, w = image.shape[:2]
-        base_image_path = channel_0_path.with_name(f"{sample_stem}{channel_0_path.suffix}")
-        mask_path = find_label_for_image(base_image_path) or find_label_for_image(channel_0_path)
+        base_image_path = channel_0_path.with_name(
+            f"{sample_stem}{channel_0_path.suffix}"
+        )
+        mask_path = find_label_for_image(base_image_path) or find_label_for_image(
+            channel_0_path
+        )
         class_mask = load_mask(mask_path, h, w, num_classes=len(self.classes))
 
         image, class_mask = apply_transform(self.transform, image, class_mask)

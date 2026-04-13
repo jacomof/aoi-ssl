@@ -1,11 +1,12 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
+# This file includes code adapted from Meta Platforms, Inc. and affiliates:
+# https://github.com/facebookresearch/dino
 #
-# This source code is licensed under the Apache License, Version 2.0
-# found in the LICENSE file in the root directory of this source tree.
+# Original code license: Apache License 2.0.
+# You may obtain a copy of the license in this repository's LICENSE file.
 
-# References:
-#   https://github.com/facebookresearch/dino/blob/master/vision_transformer.py
-#   https://github.com/rwightman/pytorch-image-models/tree/master/timm/layers/patch_embed.py
+# Modifications in this repository:
+# - Added support for xFormers.
+# - Reorganized and split into components.
 
 from typing import Callable, Optional, Tuple, Union
 
@@ -56,7 +57,6 @@ class PatchEmbed(nn.Module):
         self.patch_size = patch_HW
         self.patches_resolution = patch_grid_size
         self.num_patches = patch_grid_size[0] * patch_grid_size[1]
-    
 
         self.in_chans = in_chans
         self.embed_dim = embed_dim
@@ -64,7 +64,9 @@ class PatchEmbed(nn.Module):
         self.flatten_embedding = flatten_embedding
 
         # Due to assertion in forward, we can assume that the image size is divisible by the patch size
-        self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_HW, stride=patch_HW)
+        self.proj = nn.Conv2d(
+            in_chans, embed_dim, kernel_size=patch_HW, stride=patch_HW
+        )
         self.norm = norm_layer(embed_dim) if norm_layer else nn.Identity()
 
     def update_img_parameters(self, img_size: Union[int, Tuple[int, int]]):
@@ -88,13 +90,19 @@ class PatchEmbed(nn.Module):
         self.update_img_parameters((H, W))
 
         # Check if the input image size is divisible by the patch size
-        assert H % patch_H == 0, f"Input image height {H} is not a multiple of patch height {patch_H}"
-        assert W % patch_W == 0, f"Input image width {W} is not a multiple of patch width: {patch_W}"
+        assert (
+            H % patch_H == 0
+        ), f"Input image height {H} is not a multiple of patch height {patch_H}"
+        assert (
+            W % patch_W == 0
+        ), f"Input image width {W} is not a multiple of patch width: {patch_W}"
 
-        x = self.proj(x)  # input size: BxCxHxW -> output size: BxDx(H//P)x(W//P) 
+        x = self.proj(x)  # input size: BxCxHxW -> output size: BxDx(H//P)x(W//P)
         H, W = x.size(2), x.size(3)
-        x = x.flatten(2).transpose(1, 2)  # input size: BxDx(H//P)x(W//P) -> output size: Bx[(H//P)*(W//P)]xD
-        x = self.norm(x) 
+        x = x.flatten(2).transpose(
+            1, 2
+        )  # input size: BxDx(H//P)x(W//P) -> output size: Bx[(H//P)*(W//P)]xD
+        x = self.norm(x)
         # TODO: If we don't want to flatten we shouldn't do it in the first place, so add check before flattening
         if not self.flatten_embedding:
             x = x.reshape(-1, H, W, self.embed_dim)  # output size:  Bx(H//P)x(W//P)xC
@@ -102,7 +110,13 @@ class PatchEmbed(nn.Module):
 
     def flops(self) -> float:
         Ho, Wo = self.patches_resolution
-        flops = Ho * Wo * self.embed_dim * self.in_chans * (self.patch_size[0] * self.patch_size[1])
+        flops = (
+            Ho
+            * Wo
+            * self.embed_dim
+            * self.in_chans
+            * (self.patch_size[0] * self.patch_size[1])
+        )
         if self.norm is not None:
             flops += Ho * Wo * self.embed_dim
         return flops

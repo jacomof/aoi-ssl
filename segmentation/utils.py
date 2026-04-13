@@ -7,8 +7,8 @@ from lightning.pytorch.callbacks import Callback
 from lightning.pytorch.loggers.logger import Logger
 from lightning.pytorch import loggers as pl_loggers
 from lightning.pytorch.loggers import MLFlowLogger
-# from aimstack.pytorch_lightning_tracker.loggers import BaseLogger as AimLogger
 
+# from aimstack.pytorch_lightning_tracker.loggers import BaseLogger as AimLogger
 
 
 def merge_config(
@@ -33,10 +33,10 @@ def merge_config(
 
     # Remove None values
     args_dict = vars(args)
-    args_dict = {k: v for k, v in args_dict.items() if v != None}
+    args_dict = {k: v for k, v in args_dict.items() if v is not None}
 
     # Merge the dictionaries, giving priority to YAML values
-    # TODO: Probably gives priority to args, as it's unpacked last
+    # Gives priority to args, as it's unpacked last
     if model_config_file is not None:
         merged_config = {**yml_config, **yml_model_config, **args_dict}
     else:
@@ -45,8 +45,7 @@ def merge_config(
 
 
 def merge_model_params_segementation_encoder(
-        config: argparse.Namespace,
-        encoder_config_path
+    config: argparse.Namespace, encoder_config_path
 ):
     """Merges the encoder parameters with the segmentation model parameters.
 
@@ -62,9 +61,11 @@ def merge_model_params_segementation_encoder(
 
     # Remove None values
     encoder_config_dict = yml_encoder_config["model_params"]
-    encoder_config_dict = {k: v for k, v in encoder_config_dict.items() if v != None}
+    encoder_config_dict = {
+        k: v for k, v in encoder_config_dict.items() if v is not None
+    }
 
-    # Update parameters that need to be consisten between pretrained encoder
+    # Update parameters that need to be consistent between pretrained encoder
     # and segmentation model.
     model_params = config.model_params
     model_params = {**encoder_config_dict, **config.model_params}
@@ -73,10 +74,8 @@ def merge_model_params_segementation_encoder(
     model_params["patch_size"] = encoder_config_dict.get("patch_size", 14)
     model_params["in_chans"] = encoder_config_dict.get("in_chans", 2)
     model_params["double_view"] = encoder_config_dict.get("double_view", False)
-    print("double view is ", model_params["double_view"])
     return model_params
-    
-    
+
 
 def get_loggers(
     tracking_uri: str,
@@ -86,7 +85,7 @@ def get_loggers(
     experiment_n: int,
     experiment_name: str = "aoi-vit",
     use_tb_logger: bool = False,
-    use_csv_logger: bool = True, # Backup logger for MLFlow
+    use_csv_logger: bool = True,  # Backup logger for MLFlow
 ) -> list[Logger]:
     """Returns a list of logger objects for experiment tracking, currently only supports
     MLFlow, Aim and Tensorboard.
@@ -120,9 +119,7 @@ def get_loggers(
         loggers.append(tb_logger)
 
     if use_csv_logger:
-        csv_logger = pl_loggers.CSVLogger(
-            str(logging_path), name="backup_csv_logs"
-        )
+        csv_logger = pl_loggers.CSVLogger(str(logging_path), name="backup_csv_logs")
         loggers.append(csv_logger)
 
     # else:
@@ -155,15 +152,15 @@ class GradNormCallback(Callback):
         pl_module.log("train/grad_norm", grad_norm(pl_module))
 
 
-
 class SafeMLFlowLogger(MLFlowLogger):
-    """ A wrapper around MLFlowLogger to handle exceptions gracefully.
+    """A wrapper around MLFlowLogger to handle exceptions gracefully.
 
     This class overrides the log_hyperparams and log_metrics methods to catch
     exceptions that may occur during logging. If an exception occurs, it prints
     an error message and continues execution without raising the exception so training
     is not completely halted.
     """
+
     def log_hyperparams(self, params):
         try:
             super().log_hyperparams(params)
