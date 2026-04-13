@@ -1,10 +1,10 @@
-# AOI-SSL
+# 🧘 AOI-SSL 📟
 
 Official code release for our CVPRW 2026 (AI4RWC) paper:
 
 AOI-SSL: Self-Supervised Framework for Efficient Segmentation of Wire-Bonded Semiconductors in Optical Inspection.
 
-## Overview
+## 🔍 Overview
 
 AOI-SSL is a self-supervised learning and fine-tuning pipeline for industrial visual inspection. The repository includes:
 
@@ -14,7 +14,7 @@ AOI-SSL is a self-supervised learning and fine-tuning pipeline for industrial vi
 - configurable experiment setups under [configs](configs),
 - experiment tracking using MLFlow.
 
-## Confidentiality And Public Release Scope
+## 🔒 Confidentiality And Public Release Scope
 
 The original project was developed with a private industrial dataset. To protect confidentiality:
 
@@ -25,7 +25,7 @@ The original project was developed with a private industrial dataset. To protect
 
 No proprietary data is included in this repository.
 
-## Licensing And Third-Party Notices
+## ⚖️ Licensing And Third-Party Notices
 
 This repository is distributed under Apache-2.0, with the exception of specific third-party files that keep their original upstream license terms.
 
@@ -33,7 +33,7 @@ In particular, parts of `segmentation/models/faster_vit` are derived from NVIDIA
 
 See `THIRD_PARTY_NOTICES` for a file-by-file provenance and licensing summary.
 
-## Repository Structure
+## 📁 Repository Structure
 
 - [configs](configs): pretraining and fine-tuning YAML configurations
 - [data](data): Lightning data modules and pytorch datasets
@@ -43,14 +43,14 @@ See `THIRD_PARTY_NOTICES` for a file-by-file provenance and licensing summary.
 - [tests](tests): exploratory notebooks
 - [scripts](scripts): scripts to launch pre-training and fine-tuning experiments and guide the use of the pretrain.py and train.py
 
-## Quick Start
+## 🚀 Quick Start
 
 1. Install dependencies in your environment (PyTorch, Lightning, Albumentations, OpenCV, TorchMetrics, timm, etc.).
 2. Generate MNIST stub dataset by running the download_mnist_preprocess.ipynb jupyter notebook
 3. Point config files to your dataset/checkpoint paths if needed.
 4. Run your chosen pretraining or fine-tuning entrypoint.
 
-## Stub Dataset Layout
+## 📊 Stub Dataset Layout
 
 The default stub MNIST dataset layout is:
 
@@ -89,10 +89,10 @@ Mask convention:
 - single-channel label maps with integer class IDs,
 - classes are configured via `classes` in YAML (default: wire/ball/wedge/epoxy).
 
-## Citation
+## 📖 Citation
 
 If you use this repository, please cite the paper once the workshop proceedings are available.
 
-## Acknowledgements
+## 🤝 Acknowledgements
 
 This repository is built on top of existing [ViT and DINO implementations](https://github.com/facebookresearch/dino/tree/main) by M. Caron et al. The patch-level retrieval strategies are built on top of the [HummingBird implementation](https://github.com/vpariza/open-hummingbird-eval/tree/main) by V. Pariza. The FasterViT implementation was adapted from the [original NVIDIA repository](https://github.com/NVlabs/FasterViT) by A. Hatamizadeh et al. We thank the authors of these repositories for creating such high-quality and reproducible code.
