@@ -46,7 +46,8 @@ See `THIRD_PARTY_NOTICES` for a file-by-file provenance and licensing summary.
 ## 🚀 Quick Start
 
 1. Install dependencies in your environment (PyTorch, Lightning, Albumentations, OpenCV, TorchMetrics, timm, etc.).
-2. Generate MNIST stub dataset by running the download_mnist_preprocess.ipynb jupyter notebook
+	1. **Recommended**. Install the GPU version of faiss for much faster inference. Installation instructions available in the [faiss documentation](https://github.com/facebookresearch/faiss/blob/main/INSTALL.md). 
+2. Generate MNIST stub dataset by running the download_mnist_preprocess.ipynb jupyter notebook.
 3. Create or adapt config files (see existing [configs](configs)). Point config files to your dataset/checkpoint paths if needed.
 4. Run your chosen pretraining or fine-tuning entrypoint ([fine-tuning](segmentation/train.py), [MAE-pretraining](pretrain/mae/pretrain.py), etc.). You can use or adapt existing experiments in [scripts](scripts) directly.
 
