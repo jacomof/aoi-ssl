@@ -92,7 +92,17 @@ Mask convention:
 
 ## 📖 Citation
 
-If you use this repository, please cite the paper once the workshop proceedings are available.
+If you use this repository, please cite our paper:
+
+```bibtex
+@inproceedings{figueira2026aoi,
+  title={AOI-SSL: Self-Supervised Framework for Efficient Segmentation of Wire-bonded Semiconductors In Optical Inspection},
+  author={Figueira, Joaqu{\'\i}n and Van Gastel, Rob and D'Amicantonio, Giacomo and Liu, Zhuoran and Bucur, Ioan Gabriel and Boughorbel, Faysal and Bondarev, Egor},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+  pages={9135--9144},
+  year={2026}
+}
+```
 
 ## 🤝 Acknowledgements
 
